@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CertifiedIQ — Regulatory Term Database</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+
+  :root {
+    --bg:        #f2f0eb;
+    --surface:   #ffffff;
+    --surface2:  #f7f5f0;
+    --surface3:  #ede9e2;
+    --border:    #d4cfc6;
+    --border2:   #bfb9af;
+    --accent:    #0072B2;
+    --accent2:   #005a8e;
+    --accent-bg: rgba(0,114,178,0.08);
+    --text:      #1a1714;
+    --text-muted:#6b6560;
+    --text-dim:  #4a4540;
+    --green:     #009E73;
+    --yellow:    #E69F00;
+    --blue:      #56B4E9;
+    --danger:    #D55E00;
+    --purple:    #CC79A7;
+    --mono:      'IBM Plex Mono', monospace;
+    --sans:      'IBM Plex Sans', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; font-size: 13px; }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(0,114,178,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,114,178,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none; z-index: 0;
+  }
+
+  /* ── Header ── */
+  .header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 24px; border-bottom: 1px solid var(--border);
+    background: var(--surface); position: sticky; top: 0; z-index: 100;
+  }
+  .header-left { display: flex; align-items: center; gap: 14px; }
+  .logo { font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--text); letter-spacing: 0.08em; text-transform: uppercase; }
+  .header-title { font-family: var(--mono); font-size: 10px; color: var(--text-muted); letter-spacing: 0.12em; text-transform: uppercase; margin-top: 1px; }
+  .header-right { display: flex; gap: 8px; align-items: center; }
+
+  .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-dim); display: inline-block; transition: background 0.3s; }
+  .status-dot.ok  { background: #009E73; box-shadow: 0 0 6px #009E73; }
+  .status-dot.err { background: #D55E00; box-shadow: 0 0 6px #D55E00; }
+  .status-label   { font-family: var(--mono); font-size: 10px; color: var(--text-muted); }
+
+  /* ── Buttons ── */
+  .btn {
+    font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: 0.08em;
+    padding: 7px 14px; border-radius: 4px; cursor: pointer; border: 1px solid; transition: all 0.15s;
+    text-transform: uppercase;
+  }
+  .btn-primary   { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent2); border-color: var(--accent2); }
+  .btn-outline   { background: transparent; border-color: var(--border2); color: var(--text-muted); }
+  .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-ghost     { background: transparent; border-color: transparent; color: var(--text-muted); padding: 4px 8px; }
+  .btn-ghost:hover { color: var(--text); }
+  .btn-danger    { background: transparent; border-color: rgba(213,94,0,0.35); color: #D55E00; }
+  .btn-danger:hover { background: rgba(213,94,0,0.12); }
+  .btn-export    { background: rgba(0,158,115,0.12); border-color: rgba(0,158,115,0.35); color: #009E73; }
+  .btn-export:hover { background: rgba(0,158,115,0.22); }
+  .btn:disabled  { opacity: 0.4; cursor: not-allowed; }
+
+  /* ── Layout ── */
+  .layout { display: flex; height: calc(100vh - 49px); }
+  .sidebar { width: 200px; min-width: 200px; border-right: 1px solid var(--border); background: var(--surface); padding: 16px 0; overflow-y: auto; }
+  .main    { flex: 1; overflow-y: auto; padding: 24px; background: var(--bg); }
+
+  /* ── Sidebar nav ── */
+  .sidebar-section { padding: 0 12px 8px; font-family: var(--mono); font-size: 9px; font-weight: 700; color: var(--text-dim); letter-spacing: 0.15em; text-transform: uppercase; }
+  .nav-item {
+    display: flex; align-items: center; gap: 8px; padding: 8px 16px;
+    cursor: pointer; transition: all 0.12s; border-left: 2px solid transparent;
+    font-family: var(--mono); font-size: 11px; color: var(--text-muted);
+  }
+  .nav-item:hover { background: var(--surface2); color: var(--text); }
+  .nav-item.active { border-left-color: var(--accent); color: var(--accent); background: var(--accent-bg); }
+  .nav-icon { font-size: 13px; width: 16px; text-align: center; }
+  .nav-count { margin-left: auto; font-size: 9px; color: var(--text-dim); background: var(--surface3); padding: 2px 5px; border-radius: 10px; }
+
+  .sidebar-divider { border: none; border-top: 1px solid var(--border); margin: 8px 12px; }
+
+  /* ── Page header ── */
+  .page-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 20px; gap: 16px; }
+  .page-title  { font-family: var(--mono); font-size: 14px; font-weight: 700; color: var(--text); letter-spacing: -0.02em; }
+  .page-sub    { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+  .page-actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+  /* ── Search / filter bar ── */
+  .filter-bar { display: flex; gap: 8px; margin-bottom: 16px; align-items: center; flex-wrap: wrap; }
+  .search-wrap { position: relative; flex: 1; min-width: 200px; }
+  .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-dim); font-size: 12px; pointer-events: none; }
+  .search-input {
+    width: 100%; padding: 8px 10px 8px 30px; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 4px; color: var(--text); font-family: var(--mono); font-size: 11px;
+    outline: none; transition: border-color 0.15s;
+  }
+  .search-input:focus { border-color: var(--accent); }
+  .search-input::placeholder { color: var(--text-dim); }
+  .filter-select {
+    padding: 8px 10px; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 4px; color: var(--text-muted); font-family: var(--mono); font-size: 11px;
+    outline: none; cursor: pointer;
+  }
+  .filter-select:focus { border-color: var(--accent); }
+
+  /* ── Lang toggle pills ── */
+  .lang-pills { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 12px; align-items: center; }
+  .lang-pill {
+    font-family: var(--mono); font-size: 9px; font-weight: 700; padding: 3px 8px; border-radius: 3px;
+    border: 1px solid var(--border); cursor: pointer; color: var(--text-dim); background: transparent;
+    letter-spacing: 0.08em; text-transform: uppercase; transition: all 0.12s;
+  }
+  .lang-pill.active { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); }
+  .lang-pills-label { font-family: var(--mono); font-size: 9px; color: var(--text-dim); letter-spacing: 0.1em; text-transform: uppercase; margin-right: 4px; }
+
+  /* ── Table ── */
+  .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 6px; }
+  table { width: 100%; border-collapse: collapse; }
+  thead tr { background: var(--surface2); }
+  th {
+    font-family: var(--mono); font-size: 9px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--text-dim); padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border);
+    white-space: nowrap; position: sticky; top: 0; background: var(--surface2);
+  }
+  td { padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: top; font-size: 12px; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--surface2); }
+
+  .cell-en { font-family: var(--mono); font-weight: 600; color: var(--text); }
+  .cell-translation { color: var(--text-muted); }
+  .cell-empty { color: var(--text-dim); font-style: italic; font-size: 10px; }
+
+  .badge {
+    display: inline-block; font-family: var(--mono); font-size: 9px; font-weight: 700;
+    padding: 2px 7px; border-radius: 3px; letter-spacing: 0.08em; text-transform: uppercase;
+  }
+  .badge-critical { background: rgba(213,94,0,0.12); color: #D55E00; border: 1px solid rgba(213,94,0,0.3); }
+  .badge-normal   { background: var(--surface3); color: var(--text-dim); border: 1px solid var(--border); }
+  .badge-cat      { background: rgba(0,114,178,0.10); color: #0072B2; border: 1px solid rgba(0,114,178,0.25); }
+
+  .row-actions { display: flex; gap: 4px; }
+
+  /* ── Empty state ── */
+  .empty { text-align: center; padding: 60px 20px; color: var(--text-dim); font-family: var(--mono); font-size: 12px; }
+  .empty-icon { font-size: 32px; margin-bottom: 12px; }
+
+  /* ── Modal ── */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200;
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+    opacity: 0; pointer-events: none; transition: opacity 0.2s;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border2); border-radius: 8px;
+    width: 100%; max-width: 720px; max-height: 90vh; overflow-y: auto;
+    transform: translateY(12px); transition: transform 0.2s;
+  }
+  .modal-overlay.open .modal { transform: translateY(0); }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--border); }
+  .modal-title { font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--text); text-transform: uppercase; letter-spacing: 0.1em; }
+  .modal-body   { padding: 20px; }
+  .modal-footer { display: flex; justify-content: flex-end; gap: 8px; padding: 14px 20px; border-top: 1px solid var(--border); }
+
+  /* ── Form ── */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .form-full  { grid-column: 1 / -1; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-label { font-family: var(--mono); font-size: 9px; font-weight: 700; color: var(--text-dim); letter-spacing: 0.12em; text-transform: uppercase; }
+  .form-input, .form-select, .form-textarea {
+    padding: 8px 10px; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 4px; color: var(--text); font-family: var(--mono); font-size: 11px;
+    outline: none; transition: border-color 0.15s; width: 100%;
+  }
+  .form-textarea { resize: vertical; min-height: 80px; }
+  .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--accent); }
+  .form-section-title { font-family: var(--mono); font-size: 9px; font-weight: 700; color: var(--accent); letter-spacing: 0.15em; text-transform: uppercase; padding: 12px 0 4px; border-top: 1px solid var(--border); margin-top: 4px; }
+  .form-hint { font-size: 10px; color: var(--text-dim); }
+
+  /* ── Export panel ── */
+  .export-panel { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 20px; }
+  .export-title { font-family: var(--mono); font-size: 11px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+  .export-desc  { font-size: 11px; color: var(--text-muted); margin-bottom: 16px; line-height: 1.6; }
+  .code-block   { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 14px; font-family: var(--mono); font-size: 10px; color: var(--text-muted); max-height: 320px; overflow-y: auto; white-space: pre; line-height: 1.6; }
+  .copy-wrap    { display: flex; justify-content: flex-end; margin-top: 8px; }
+
+  /* ── Profile edit ── */
+  .profile-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 16px; margin-bottom: 12px; }
+  .profile-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .profile-name   { font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--text); }
+  .profile-body   { font-family: var(--mono); font-size: 10px; color: var(--accent); }
+  .weights-grid   { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 12px; }
+  .weight-item    { display: flex; flex-direction: column; gap: 4px; }
+  .weight-label   { font-family: var(--mono); font-size: 9px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.1em; }
+  .weight-input   { padding: 5px 8px; background: var(--surface3); border: 1px solid var(--border); border-radius: 3px; color: var(--text); font-family: var(--mono); font-size: 11px; outline: none; width: 100%; }
+  .weight-input:focus { border-color: var(--accent); }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed; bottom: 20px; right: 20px; padding: 10px 16px;
+    background: var(--surface2); border: 1px solid var(--border2); border-radius: 5px;
+    font-family: var(--mono); font-size: 11px; color: var(--text); z-index: 999;
+    transform: translateY(60px); opacity: 0; transition: all 0.3s; pointer-events: none;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.success { border-color: rgba(0,158,115,0.45); color: #009E73; }
+  .toast.error   { border-color: rgba(213,94,0,0.45);  color: #D55E00; }
+
+  /* ── Loading ── */
+  .loading { display: flex; align-items: center; gap: 8px; color: var(--text-dim); font-family: var(--mono); font-size: 11px; padding: 40px; justify-content: center; }
+  .spinner { width: 16px; height: 16px; border: 2px solid var(--border); border-top-color: #0072B2; border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--surface2); }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #a09a94; }
+
+  /* ── Layout ── */
+  .layout { display: flex; height: calc(100vh - 49px); position: relative; z-index: 1; }
+</style>
+</head>
+<body>
+
+<!-- ── CONFIG — paste your deployed Apps Script URL here ── -->
+<script>
+  const API_URL = 'https://script.google.com/macros/s/AKfycbwxdbALcuNtcWSg8-1p8-LrsRhBL0EctkSGGKWy4duB_Tqol4BGhkZxGc3j8OgfDaiU/exec';
+</script>
+
+<!-- ── Header ── -->
+<div class="header">
+  <div class="header-left">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div style="width:28px;height:28px;background:var(--accent);display:flex;align-items:center;justify-content:center;clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%)">
+        <svg width="14" height="14" viewBox="0 0 18 18" fill="none"><path d="M9 2L14 5V13L9 16L4 13V5L9 2Z" stroke="#fff" stroke-width="1.5" fill="none"/><path d="M9 6L12 7.5V11L9 12.5L6 11V7.5L9 6Z" fill="#fff"/></svg>
+      </div>
+      <div>
+        <div class="logo">CertifiedIQ</div>
+        <div class="header-title">Regulatory Term Database</div>
+      </div>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="status-dot" id="statusDot"></span>
+    <span class="status-label" id="statusLabel">Connecting…</span>
+    <button class="btn btn-export" onclick="openExport()">⬇ Export JS</button>
+  </div>
+</div>
+
+<!-- ── Layout ── -->
+<div class="layout">
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-section">Sectors</div>
+    <div class="nav-item active" data-view="glossary" data-sector="food_hospitality" onclick="switchSector(this)">
+      <span class="nav-icon">🍽</span> Food &amp; Hospitality
+      <span class="nav-count" id="cnt-food_hospitality">—</span>
+    </div>
+    <div class="nav-item" data-view="glossary" data-sector="homecare" onclick="switchSector(this)">
+      <span class="nav-icon">🏠</span> Homecare
+      <span class="nav-count" id="cnt-homecare">—</span>
+    </div>
+    <div class="nav-item" data-view="glossary" data-sector="construction" onclick="switchSector(this)">
+      <span class="nav-icon">🏗</span> Construction
+      <span class="nav-count" id="cnt-construction">—</span>
+    </div>
+    <div class="nav-item" data-view="glossary" data-sector="transport" onclick="switchSector(this)">
+      <span class="nav-icon">🚚</span> Transport
+      <span class="nav-count" id="cnt-transport">—</span>
+    </div>
+    <div class="nav-item" data-view="glossary" data-sector="manufacturing" onclick="switchSector(this)">
+      <span class="nav-icon">🏭</span> Manufacturing
+      <span class="nav-count" id="cnt-manufacturing">—</span>
+    </div>
+    <hr class="sidebar-divider">
+    <div class="sidebar-section">Views</div>
+    <div class="nav-item" data-view="presets" data-sector="" onclick="switchView('presets')">
+      <span class="nav-icon">⚡</span> Quick Add Presets
+    </div>
+    <div class="nav-item" data-view="profiles" data-sector="" onclick="switchView('profiles')">
+      <span class="nav-icon">⚖️</span> Scoring Profiles
+    </div>
+  </nav>
+
+  <!-- Main -->
+  <main class="main" id="mainContent">
+    <div class="loading"><div class="spinner"></div>Loading database…</div>
+  </main>
+
+</div>
+
+<!-- ── Add/Edit Term Modal ── -->
+<div class="modal-overlay" id="termModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="termModalTitle">Add Term</span>
+      <button class="btn btn-ghost" onclick="closeModal('termModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">English Term</label>
+          <input class="form-input" id="f-en_term" placeholder="e.g. allergen">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Category</label>
+          <select class="form-select" id="f-category">
+            <option value="allergen">allergen</option>
+            <option value="regulatory">regulatory</option>
+            <option value="food_safety">food_safety</option>
+            <option value="emergency">emergency</option>
+            <option value="hazard">hazard</option>
+            <option value="prohibition">prohibition</option>
+            <option value="procedure">procedure</option>
+            <option value="equipment">equipment</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Sector</label>
+          <select class="form-select" id="f-sector">
+            <option value="food_hospitality">Food &amp; Hospitality</option>
+            <option value="homecare">Homecare</option>
+            <option value="construction">Construction</option>
+            <option value="transport">Transport</option>
+            <option value="manufacturing">Manufacturing</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Critical?</label>
+          <select class="form-select" id="f-critical">
+            <option value="TRUE">Yes — safety critical</option>
+            <option value="FALSE">No</option>
+          </select>
+        </div>
+        <div class="form-full"><div class="form-section-title">Translations (Annex II / official sources)</div></div>
+        <div class="form-group"><label class="form-label">🇫🇷 French</label><input class="form-input" id="f-fr" placeholder="French"></div>
+        <div class="form-group"><label class="form-label">🇵🇱 Polish</label><input class="form-input" id="f-pl" placeholder="Polish"></div>
+        <div class="form-group"><label class="form-label">🇷🇴 Romanian</label><input class="form-input" id="f-ro" placeholder="Romanian"></div>
+        <div class="form-group"><label class="form-label">🇺🇦 Ukrainian</label><input class="form-input" id="f-uk" placeholder="Ukrainian"></div>
+        <div class="form-group"><label class="form-label">🇵🇹 Portuguese</label><input class="form-input" id="f-pt" placeholder="Portuguese"></div>
+        <div class="form-group"><label class="form-label">🇪🇸 Spanish</label><input class="form-input" id="f-es" placeholder="Spanish"></div>
+        <div class="form-group"><label class="form-label">🇱🇹 Lithuanian</label><input class="form-input" id="f-lt" placeholder="Lithuanian"></div>
+        <div class="form-group"><label class="form-label">🇩🇪 German</label><input class="form-input" id="f-de" placeholder="German"></div>
+        <div class="form-group"><label class="form-label">🇱🇻 Latvian</label><input class="form-input" id="f-lv" placeholder="Latvian"></div>
+        <div class="form-group"><label class="form-label">🇬🇷 Greek</label><input class="form-input" id="f-el" placeholder="Greek"></div>
+        <div class="form-group"><label class="form-label">🇿🇦 Afrikaans</label><input class="form-input" id="f-af" placeholder="Afrikaans"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('termModal')">Cancel</button>
+      <button class="btn btn-primary" id="termSaveBtn" onclick="saveTerm()">Save Term</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Add/Edit Preset Modal ── -->
+<div class="modal-overlay" id="presetModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="presetModalTitle">Add Quick Add Preset</span>
+      <button class="btn btn-ghost" onclick="closeModal('presetModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">Sector</label>
+          <select class="form-select" id="pf-sector">
+            <option value="food_hospitality">Food &amp; Hospitality</option>
+            <option value="homecare">Homecare</option>
+            <option value="construction">Construction</option>
+            <option value="transport">Transport</option>
+            <option value="manufacturing">Manufacturing</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Language</label>
+          <select class="form-select" id="pf-language">
+            <option>Polish</option><option>Romanian</option><option>Portuguese</option>
+            <option>Spanish</option><option>French</option><option>Lithuanian</option>
+            <option>Ukrainian</option><option>German</option><option>Latvian</option>
+            <option>Greek</option><option>Afrikaans</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Source (English)</label>
+          <input class="form-input" id="pf-src" placeholder="e.g. Critical Control Point">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Target Translation</label>
+          <input class="form-input" id="pf-tgt" placeholder="e.g. Krytyczny Punkt Kontroli">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('presetModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="savePreset()">Save Preset</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Export Modal ── -->
+<div class="modal-overlay" id="exportModal">
+  <div class="modal" style="max-width:820px">
+    <div class="modal-header">
+      <span class="modal-title">Export — JavaScript Objects</span>
+      <button class="btn btn-ghost" onclick="closeModal('exportModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:11px;color:var(--text-muted);margin-bottom:16px;line-height:1.7">
+        Copy the block below and paste it into <code style="font-family:var(--mono);color:var(--accent)">translation-validator-vr2_2.html</code> to replace
+        <code style="font-family:var(--mono);color:var(--accent)">SECTOR_GLOSSARIES</code>,
+        <code style="font-family:var(--mono);color:var(--accent)">TRANSLATION_PRESETS</code>, and
+        <code style="font-family:var(--mono);color:var(--accent)">REGULATORY_PROFILES</code>.
+      </p>
+      <div id="exportLoading" class="loading"><div class="spinner"></div>Building export…</div>
+      <div id="exportOutput" style="display:none">
+        <div class="code-block" id="exportCode"></div>
+        <div class="copy-wrap">
+          <button class="btn btn-export" onclick="copyExport()">⎘ Copy All</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('exportModal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Toast ── -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ─────────────────────────────────────────────────────────────────
+// State
+// ─────────────────────────────────────────────────────────────────
+let state = {
+  view:         'glossary',
+  sector:       'food_hospitality',
+  glossary:     [],
+  presets:      [],
+  profiles:     [],
+  activeLangs:  ['pl','ro'],
+  search:       '',
+  catFilter:    '',
+  editingTermId: null,
+  editingPresetId: null,
+};
+
+const LANGS = [
+  { code:'fr', label:'FR', flag:'🇫🇷' },
+  { code:'pl', label:'PL', flag:'🇵🇱' },
+  { code:'ro', label:'RO', flag:'🇷🇴' },
+  { code:'uk', label:'UK', flag:'🇺🇦' },
+  { code:'pt', label:'PT', flag:'🇵🇹' },
+  { code:'es', label:'ES', flag:'🇪🇸' },
+  { code:'lt', label:'LT', flag:'🇱🇹' },
+  { code:'de', label:'DE', flag:'🇩🇪' },
+  { code:'lv', label:'LV', flag:'🇱🇻' },
+  { code:'el', label:'EL', flag:'🇬🇷' },
+  { code:'af', label:'AF', flag:'🇿🇦' },
+];
+
+const SECTORS = {
+  food_hospitality: { label:'Food & Hospitality', icon:'🍽', reg:'FSAI' },
+  homecare:         { label:'Homecare',            icon:'🏠', reg:'HIQA' },
+  construction:     { label:'Construction',        icon:'🏗', reg:'HSA'  },
+  transport:        { label:'Transport',            icon:'🚚', reg:'RSA'  },
+  manufacturing:    { label:'Manufacturing',        icon:'🏭', reg:'HSA'  },
+};
+
+// ─────────────────────────────────────────────────────────────────
+// API
+// ─────────────────────────────────────────────────────────────────
+async function api(action, params = {}) {
+  const qs = new URLSearchParams({ action, ...params }).toString();
+  const res = await fetch(`${API_URL}?${qs}`);
+  return res.json();
+}
+
+async function apiPost(body) {
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  return res.json();
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Init
+// ─────────────────────────────────────────────────────────────────
+async function init() {
+  // ping
+  try {
+    const ping = await api('ping');
+    if (ping.ok) {
+      setStatus('ok', 'Connected');
+    } else throw new Error();
+  } catch {
+    setStatus('err', 'Offline');
+  }
+
+  // load all data
+  await loadAll();
+  renderGlossary();
+}
+
+async function loadAll() {
+  const [glossary, presets, profiles] = await Promise.all([
+    api('glossary'),
+    api('presets'),
+    api('profiles'),
+  ]);
+  state.glossary  = Array.isArray(glossary)  ? glossary  : [];
+  state.presets   = Array.isArray(presets)   ? presets   : [];
+  state.profiles  = Array.isArray(profiles)  ? profiles  : [];
+
+  // update sidebar counts
+  Object.keys(SECTORS).forEach(s => {
+    const cnt = state.glossary.filter(r => r.sector === s).length;
+    const el = document.getElementById('cnt-' + s);
+    if (el) el.textContent = cnt;
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Navigation
+// ─────────────────────────────────────────────────────────────────
+function switchSector(el) {
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  el.classList.add('active');
+  state.sector = el.dataset.sector;
+  state.view   = 'glossary';
+  renderGlossary();
+}
+
+function switchView(view) {
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelector(`[data-view="${view}"]`).classList.add('active');
+  state.view = view;
+  if (view === 'presets')  renderPresets();
+  if (view === 'profiles') renderProfiles();
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Glossary view
+// ─────────────────────────────────────────────────────────────────
+function renderGlossary() {
+  const sec = SECTORS[state.sector];
+  const rows = state.glossary.filter(r => {
+    if (r.sector !== state.sector) return false;
+    if (state.search && !r.en_term?.toLowerCase().includes(state.search.toLowerCase())) return false;
+    if (state.catFilter && r.category !== state.catFilter) return false;
+    return true;
+  });
+
+  const cats = [...new Set(state.glossary.filter(r=>r.sector===state.sector).map(r=>r.category))].sort();
+
+  document.getElementById('mainContent').innerHTML = `
+    <div class="page-header">
+      <div>
+        <div class="page-title">${sec.icon} ${sec.label} — Glossary</div>
+        <div class="page-sub">Regulatory body: <b style="color:var(--accent)">${sec.reg}</b> · ${rows.length} term${rows.length!==1?'s':''} · Source: EU Reg. 1169/2011 Annex II + sector guidance</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-primary" onclick="openAddTerm()">+ Add Term</button>
+      </div>
+    </div>
+
+    <div class="filter-bar">
+      <div class="search-wrap">
+        <span class="search-icon">⌕</span>
+        <input class="search-input" placeholder="Search terms…" value="${state.search}"
+          oninput="state.search=this.value;renderGlossary()">
+      </div>
+      <select class="filter-select" onchange="state.catFilter=this.value;renderGlossary()">
+        <option value="">All categories</option>
+        ${cats.map(c=>`<option value="${c}" ${state.catFilter===c?'selected':''}>${c}</option>`).join('')}
+      </select>
+    </div>
+
+    <div class="lang-pills">
+      <span class="lang-pills-label">Columns:</span>
+      ${LANGS.map(l=>`
+        <button class="lang-pill ${state.activeLangs.includes(l.code)?'active':''}"
+          onclick="toggleLang('${l.code}')">${l.flag} ${l.label}</button>
+      `).join('')}
+    </div>
+
+    ${rows.length === 0 ? `<div class="empty"><div class="empty-icon">📭</div>No terms found</div>` : `
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>English Term</th>
+          <th>Category</th>
+          <th>Critical</th>
+          ${state.activeLangs.map(l=>{
+            const lang = LANGS.find(x=>x.code===l);
+            return `<th>${lang.flag} ${lang.label}</th>`;
+          }).join('')}
+          <th></th>
+        </tr></thead>
+        <tbody>
+          ${rows.map(r => `
+            <tr>
+              <td class="cell-en">${esc(r.en_term)}</td>
+              <td><span class="badge badge-cat">${esc(r.category)}</span></td>
+              <td>${r.critical==='TRUE'||r.critical===true ? '<span class="badge badge-critical">⚠ Critical</span>' : '<span class="badge badge-normal">—</span>'}</td>
+              ${state.activeLangs.map(l => `
+                <td>${r[l] ? `<span class="cell-translation">${esc(r[l])}</span>` : `<span class="cell-empty">missing</span>`}</td>
+              `).join('')}
+              <td>
+                <div class="row-actions">
+                  <button class="btn btn-ghost" onclick="openEditTerm('${r.id}')">✎</button>
+                  <button class="btn btn-danger" style="font-size:10px;padding:3px 8px" onclick="deleteTerm('${r.id}','${esc(r.en_term)}')">✕</button>
+                </div>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>`}
+  `;
+}
+
+function toggleLang(code) {
+  if (state.activeLangs.includes(code)) {
+    state.activeLangs = state.activeLangs.filter(l=>l!==code);
+  } else {
+    state.activeLangs = [...state.activeLangs, code];
+  }
+  renderGlossary();
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Presets view
+// ─────────────────────────────────────────────────────────────────
+function renderPresets() {
+  const sectors = Object.keys(SECTORS);
+  const langOptions = ['Polish','Romanian','Portuguese','Spanish','French','Lithuanian','Ukrainian','German','Latvian','Greek','Afrikaans'];
+  const sFilter = document.getElementById('pSectorFilter')?.value || '';
+  const lFilter = document.getElementById('pLangFilter')?.value   || '';
+
+  let rows = state.presets;
+  if (sFilter) rows = rows.filter(r=>r.sector===sFilter);
+  if (lFilter) rows = rows.filter(r=>r.language===lFilter);
+
+  document.getElementById('mainContent').innerHTML = `
+    <div class="page-header">
+      <div>
+        <div class="page-title">⚡ Quick Add Presets</div>
+        <div class="page-sub">Terms shown in the Quick Add panel in the translation validator · ${rows.length} preset${rows.length!==1?'s':''}</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-primary" onclick="openAddPreset()">+ Add Preset</button>
+      </div>
+    </div>
+
+    <div class="filter-bar">
+      <select class="filter-select" id="pSectorFilter" onchange="renderPresets()">
+        <option value="">All sectors</option>
+        ${sectors.map(s=>`<option value="${s}" ${sFilter===s?'selected':''}>${SECTORS[s].icon} ${SECTORS[s].label}</option>`).join('')}
+      </select>
+      <select class="filter-select" id="pLangFilter" onchange="renderPresets()">
+        <option value="">All languages</option>
+        ${langOptions.map(l=>`<option value="${l}" ${lFilter===l?'selected':''}>${l}</option>`).join('')}
+      </select>
+    </div>
+
+    ${rows.length===0 ? `<div class="empty"><div class="empty-icon">📭</div>No presets found</div>` : `
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Sector</th><th>Language</th><th>Source (EN)</th><th>Target</th><th></th></tr></thead>
+        <tbody>
+          ${rows.map(r=>`
+            <tr>
+              <td><span class="badge badge-cat">${SECTORS[r.sector]?.icon||''} ${esc(r.sector)}</span></td>
+              <td><span style="font-family:var(--mono);font-size:11px;color:var(--text-muted)">${esc(r.language)}</span></td>
+              <td class="cell-en">${esc(r.src)}</td>
+              <td class="cell-translation">${esc(r.tgt)}</td>
+              <td>
+                <div class="row-actions">
+                  <button class="btn btn-ghost" onclick="openEditPreset('${r.id}')">✎</button>
+                  <button class="btn btn-danger" style="font-size:10px;padding:3px 8px" onclick="deletePreset('${r.id}','${esc(r.src)}')">✕</button>
+                </div>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>`}
+  `;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Profiles view
+// ─────────────────────────────────────────────────────────────────
+function renderProfiles() {
+  document.getElementById('mainContent').innerHTML = `
+    <div class="page-header">
+      <div>
+        <div class="page-title">⚖️ Regulatory Scoring Profiles</div>
+        <div class="page-sub">Category weights and sector-specific criteria used by the FSAI / HIQA / HSA / RSA score engine</div>
+      </div>
+    </div>
+    ${state.profiles.map(p=>`
+      <div class="profile-card">
+        <div class="profile-header">
+          <div>
+            <div class="profile-name">${SECTORS[p.sector]?.icon||''} ${SECTORS[p.sector]?.label||p.sector}</div>
+            <div class="profile-body" style="color:#56B4E9">${p.body} · ${p.scoreLabel}</div>
+          </div>
+          <button class="btn btn-outline" onclick="saveProfile('${p.sector}')">Save</button>
+        </div>
+        <div class="weights-grid">
+          ${[
+            ['w_terminology','Terminology','terminology_weight'],
+            ['w_professional','Professional','professional_weight'],
+            ['w_safety','Safety Critical','safety_weight'],
+            ['w_completeness','Completeness','completeness_weight'],
+            ['w_grammar','Grammar','grammar_weight'],
+            ['w_fluency','Fluency','fluency_weight'],
+          ].map(([field,label])=>`
+            <div class="weight-item">
+              <div class="weight-label">${label}</div>
+              <input class="weight-input" type="number" step="0.5" min="0.5" max="3"
+                id="pw-${p.sector}-${field}" value="${p[field]||1}">
+            </div>
+          `).join('')}
+        </div>
+        <div class="form-group">
+          <label class="form-label">Extra Criteria (injected into Claude scoring prompt)</label>
+          <textarea class="form-textarea" id="pw-${p.sector}-extraCriteria" style="min-height:120px;font-size:10px">${esc(p.extraCriteria||'')}</textarea>
+        </div>
+      </div>
+    `).join('')}
+  `;
+}
+
+async function saveProfile(sector) {
+  const fields = ['w_terminology','w_professional','w_safety','w_completeness','w_grammar','w_fluency','extraCriteria'];
+  const row = {};
+  fields.forEach(f => {
+    const el = document.getElementById(`pw-${sector}-${f}`);
+    if (el) row[f] = el.value;
+  });
+  const res = await apiPost({ action: 'profile.update', sector, row });
+  if (res.ok) {
+    toast('Profile saved', 'success');
+    await loadAll();
+  } else toast('Error: ' + res.error, 'error');
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Term CRUD
+// ─────────────────────────────────────────────────────────────────
+function openAddTerm() {
+  state.editingTermId = null;
+  document.getElementById('termModalTitle').textContent = 'Add Term';
+  document.getElementById('termSaveBtn').textContent = 'Save Term';
+  const fields = ['en_term','fr','pl','ro','uk','pt','es','lt','de','lv'];
+  fields.forEach(f => { const el=document.getElementById('f-'+f); if(el) el.value=''; });
+  document.getElementById('f-sector').value  = state.sector;
+  document.getElementById('f-critical').value = 'TRUE';
+  openModal('termModal');
+}
+
+function openEditTerm(id) {
+  const r = state.glossary.find(x=>x.id===id);
+  if (!r) return;
+  state.editingTermId = id;
+  document.getElementById('termModalTitle').textContent = 'Edit Term';
+  document.getElementById('termSaveBtn').textContent = 'Update Term';
+  const fields = ['en_term','category','sector','fr','pl','ro','uk','pt','es','lt','de','lv','el','af'];
+  fields.forEach(f => { const el=document.getElementById('f-'+f); if(el) el.value = r[f]||''; });
+  document.getElementById('f-critical').value = (r.critical==='TRUE'||r.critical===true) ? 'TRUE' : 'FALSE';
+  openModal('termModal');
+}
+
+async function saveTerm() {
+  const row = {};
+  const fields = ['en_term','category','sector','critical','fr','pl','ro','uk','pt','es','lt','de','lv','el','af'];
+  fields.forEach(f => { const el=document.getElementById('f-'+f); if(el) row[f]=el.value; });
+
+  if (!row.en_term) { toast('English term is required', 'error'); return; }
+
+  let res;
+  if (state.editingTermId) {
+    res = await apiPost({ action: 'glossary.update', id: state.editingTermId, row });
+  } else {
+    res = await apiPost({ action: 'glossary.create', row });
+  }
+
+  if (res.ok) {
+    toast(state.editingTermId ? 'Term updated' : 'Term added', 'success');
+    closeModal('termModal');
+    await loadAll();
+    renderGlossary();
+  } else toast('Error: ' + res.error, 'error');
+}
+
+async function deleteTerm(id, name) {
+  if (!confirm(`Delete "${name}"?`)) return;
+  const res = await apiPost({ action: 'glossary.delete', id });
+  if (res.ok) {
+    toast('Term deleted', 'success');
+    await loadAll();
+    renderGlossary();
+  } else toast('Error: ' + res.error, 'error');
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Preset CRUD
+// ─────────────────────────────────────────────────────────────────
+function openAddPreset() {
+  state.editingPresetId = null;
+  document.getElementById('presetModalTitle').textContent = 'Add Quick Add Preset';
+  ['pf-sector','pf-language','pf-src','pf-tgt'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
+  openModal('presetModal');
+}
+
+function openEditPreset(id) {
+  const r = state.presets.find(x=>x.id===id);
+  if (!r) return;
+  state.editingPresetId = id;
+  document.getElementById('presetModalTitle').textContent = 'Edit Preset';
+  document.getElementById('pf-sector').value   = r.sector;
+  document.getElementById('pf-language').value = r.language;
+  document.getElementById('pf-src').value      = r.src;
+  document.getElementById('pf-tgt').value      = r.tgt;
+  openModal('presetModal');
+}
+
+async function savePreset() {
+  const row = {
+    sector:   document.getElementById('pf-sector').value,
+    language: document.getElementById('pf-language').value,
+    src:      document.getElementById('pf-src').value,
+    tgt:      document.getElementById('pf-tgt').value,
+  };
+  if (!row.src || !row.tgt) { toast('Source and target are required', 'error'); return; }
+
+  let res;
+  if (state.editingPresetId) {
+    res = await apiPost({ action: 'preset.update', id: state.editingPresetId, row });
+  } else {
+    res = await apiPost({ action: 'preset.create', row });
+  }
+
+  if (res.ok) {
+    toast(state.editingPresetId ? 'Preset updated' : 'Preset added', 'success');
+    closeModal('presetModal');
+    await loadAll();
+    renderPresets();
+  } else toast('Error: ' + res.error, 'error');
+}
+
+async function deletePreset(id, name) {
+  if (!confirm(`Delete preset "${name}"?`)) return;
+  const res = await apiPost({ action: 'preset.delete', id });
+  if (res.ok) {
+    toast('Preset deleted', 'success');
+    await loadAll();
+    renderPresets();
+  } else toast('Error: ' + res.error, 'error');
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Export
+// ─────────────────────────────────────────────────────────────────
+async function openExport() {
+  openModal('exportModal');
+  document.getElementById('exportLoading').style.display = 'flex';
+  document.getElementById('exportOutput').style.display  = 'none';
+
+  try {
+    const data = await api('export');
+    const code = buildExportCode(data);
+    document.getElementById('exportCode').textContent = code;
+    document.getElementById('exportLoading').style.display = 'none';
+    document.getElementById('exportOutput').style.display  = 'block';
+  } catch(e) {
+    toast('Export failed: ' + e.message, 'error');
+    closeModal('exportModal');
+  }
+}
+
+function buildExportCode(data) {
+  return `// ── Generated by CertifiedIQ Term Database ──────────────────
+// Replace the corresponding objects in translation-validator-vr2_2.html
+
+const SECTOR_GLOSSARIES = ${JSON.stringify(data.SECTOR_GLOSSARIES, null, 2)};
+
+const TRANSLATION_PRESETS = ${JSON.stringify(data.TRANSLATION_PRESETS, null, 2)};
+
+const REGULATORY_PROFILES = ${JSON.stringify(data.REGULATORY_PROFILES, null, 2)};`;
+}
+
+function copyExport() {
+  const text = document.getElementById('exportCode').textContent;
+  navigator.clipboard.writeText(text).then(()=>toast('Copied to clipboard', 'success'));
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────────
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function setStatus(type, label) {
+  document.getElementById('statusDot').className   = 'status-dot ' + type;
+  document.getElementById('statusLabel').textContent = label;
+}
+
+function toast(msg, type='') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className   = 'toast ' + type + ' show';
+  setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+function esc(s) {
+  if (s == null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// close modals on overlay click
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) overlay.classList.remove('open');
+  });
+});
+
+// ── Start ──
+init();
+</script>
+</body>
+</html>
