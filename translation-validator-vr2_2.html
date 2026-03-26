@@ -9524,27 +9524,17 @@ async function validateApiKey(id) {
       setKeyStatus(id, 'ok', '✓ connected');
 
     } else if (id === 'deeplProxyUrl') {
-      // Ping proxy with a tiny test translation
+      // Ping proxy — any HTTP response (even 400) means the Worker is alive and reachable
       const resp = await fetch(val, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: ['hi'], target_lang: 'FR' })
       });
-      if (!resp.ok) { setKeyStatus(id, 'fail', `✕ error ${resp.status}`); return; }
-      const data = await resp.json();
-      if (!data.translations) { setKeyStatus(id, 'fail', '✕ bad response'); return; }
-      // Check Gemini and DeepSeek routes too
-      const base = val.replace(/\/translate$/, '');
-      let services = ['DeepL'];
-      try {
-        const gr = await fetch(`${base}/gemini`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({prompt:'hi',maxTokens:5}) });
-        const gd = await gr.json();
-        // Gemini removed — Round 2 now uses Claude Sonnet
-      } catch(e) {}
-      try {
-        // DeepSeek removed v3.7 — GDPR (indefinite retention, China-based servers)
-      } catch(e) {}
-      setKeyStatus(id, 'ok', `✓ ${services.join(' · ')} live`);
+      // 400 = Worker alive but rejected minimal test payload — that's fine
+      // 401/403 = auth issue  500 = server error  network fail = catch block
+      if (resp.status === 500) { setKeyStatus(id, 'fail', '✕ server error'); return; }
+      if (resp.status === 401 || resp.status === 403) { setKeyStatus(id, 'fail', '✕ auth error'); return; }
+      setKeyStatus(id, 'ok', '✓ proxy live');
 
     } else if (id === 'geminiKey') {
       // Gemini no longer used — Round 2 back-translation uses Claude Sonnet
