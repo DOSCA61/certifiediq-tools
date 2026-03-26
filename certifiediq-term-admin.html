@@ -5,32 +5,42 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CertifiedIQ — Regulatory Term Database</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
 
   :root {
-    --bg:        #0d0f11;
-    --surface:   #141618;
-    --surface2:  #1c1f22;
-    --surface3:  #242729;
-    --border:    rgba(255,255,255,0.08);
-    --border2:   rgba(255,255,255,0.14);
-    --accent:    #0072B2;   /* Wong blue — safe for all colorblind types */
-    --accent2:   #56B4E9;   /* Wong sky blue */
-    --accent-bg: rgba(0,114,178,0.12);
-    --text:      #e8e8e8;
-    --text-muted:#888;
-    --text-dim:  #555;
-    --green:     #009E73;   /* Wong bluish-green — distinguishable from blue */
-    --yellow:    #E69F00;   /* Wong orange — replaces amber */
-    --blue:      #56B4E9;   /* Wong sky blue */
-    --danger:    #D55E00;   /* Wong vermillion — replaces red */
-    --purple:    #CC79A7;   /* Wong reddish-purple — for badges */
-    --mono:      'JetBrains Mono', monospace;
-    --sans:      'DM Sans', sans-serif;
+    --bg:        #f2f0eb;
+    --surface:   #ffffff;
+    --surface2:  #f7f5f0;
+    --surface3:  #ede9e2;
+    --border:    #d4cfc6;
+    --border2:   #bfb9af;
+    --accent:    #0072B2;
+    --accent2:   #005a8e;
+    --accent-bg: rgba(0,114,178,0.08);
+    --text:      #1a1714;
+    --text-muted:#6b6560;
+    --text-dim:  #4a4540;
+    --green:     #009E73;
+    --yellow:    #E69F00;
+    --blue:      #56B4E9;
+    --danger:    #D55E00;
+    --purple:    #CC79A7;
+    --mono:      'IBM Plex Mono', monospace;
+    --sans:      'IBM Plex Sans', sans-serif;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; font-size: 13px; }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(0,114,178,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,114,178,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none; z-index: 0;
+  }
 
   /* ── Header ── */
   .header {
@@ -39,8 +49,8 @@
     background: var(--surface); position: sticky; top: 0; z-index: 100;
   }
   .header-left { display: flex; align-items: center; gap: 14px; }
-  .logo { font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--accent); letter-spacing: 0.12em; text-transform: uppercase; }
-  .header-title { font-family: var(--mono); font-size: 11px; color: var(--text-muted); letter-spacing: 0.08em; }
+  .logo { font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--text); letter-spacing: 0.08em; text-transform: uppercase; }
+  .header-title { font-family: var(--mono); font-size: 10px; color: var(--text-muted); letter-spacing: 0.12em; text-transform: uppercase; margin-top: 1px; }
   .header-right { display: flex; gap: 8px; align-items: center; }
 
   .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-dim); display: inline-block; transition: background 0.3s; }
@@ -69,7 +79,7 @@
   /* ── Layout ── */
   .layout { display: flex; height: calc(100vh - 49px); }
   .sidebar { width: 200px; min-width: 200px; border-right: 1px solid var(--border); background: var(--surface); padding: 16px 0; overflow-y: auto; }
-  .main    { flex: 1; overflow-y: auto; padding: 24px; }
+  .main    { flex: 1; overflow-y: auto; padding: 24px; background: var(--bg); }
 
   /* ── Sidebar nav ── */
   .sidebar-section { padding: 0 12px 8px; font-family: var(--mono); font-size: 9px; font-weight: 700; color: var(--text-dim); letter-spacing: 0.15em; text-transform: uppercase; }
@@ -140,9 +150,9 @@
     display: inline-block; font-family: var(--mono); font-size: 9px; font-weight: 700;
     padding: 2px 7px; border-radius: 3px; letter-spacing: 0.08em; text-transform: uppercase;
   }
-  .badge-critical { background: rgba(213,94,0,0.15); color: #D55E00; border: 1px solid rgba(213,94,0,0.3); }
+  .badge-critical { background: rgba(213,94,0,0.12); color: #D55E00; border: 1px solid rgba(213,94,0,0.3); }
   .badge-normal   { background: var(--surface3); color: var(--text-dim); border: 1px solid var(--border); }
-  .badge-cat      { background: rgba(0,114,178,0.12); color: #56B4E9; border: 1px solid rgba(0,114,178,0.25); }
+  .badge-cat      { background: rgba(0,114,178,0.10); color: #0072B2; border: 1px solid rgba(0,114,178,0.25); }
 
   .row-actions { display: flex; gap: 4px; }
 
@@ -219,9 +229,12 @@
 
   /* ── Scrollbar ── */
   ::-webkit-scrollbar { width: 6px; height: 6px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 3px; }
-  ::-webkit-scrollbar-thumb:hover { background: var(--border2); }
+  ::-webkit-scrollbar-track { background: var(--surface2); }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #a09a94; }
+
+  /* ── Layout ── */
+  .layout { display: flex; height: calc(100vh - 49px); position: relative; z-index: 1; }
 </style>
 </head>
 <body>
@@ -234,8 +247,15 @@
 <!-- ── Header ── -->
 <div class="header">
   <div class="header-left">
-    <span class="logo">CertifiedIQ</span>
-    <span class="header-title">Regulatory Term Database</span>
+    <div style="display:flex;align-items:center;gap:10px">
+      <div style="width:28px;height:28px;background:var(--accent);display:flex;align-items:center;justify-content:center;clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%)">
+        <svg width="14" height="14" viewBox="0 0 18 18" fill="none"><path d="M9 2L14 5V13L9 16L4 13V5L9 2Z" stroke="#fff" stroke-width="1.5" fill="none"/><path d="M9 6L12 7.5V11L9 12.5L6 11V7.5L9 6Z" fill="#fff"/></svg>
+      </div>
+      <div>
+        <div class="logo">CertifiedIQ</div>
+        <div class="header-title">Regulatory Term Database</div>
+      </div>
+    </div>
   </div>
   <div class="header-right">
     <span class="status-dot" id="statusDot"></span>
