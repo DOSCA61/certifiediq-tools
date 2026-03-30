@@ -1,0 +1,1579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CertifiedIQ · Regulatory Term Database</title>
+<style>
+/* ── Variables — Light theme · Wong colorblind-safe palette ──
+   Matches translation-validator-vr2_2.html:
+   Accent (interactive) = #0072B2  Wong Blue
+   Green  (success)     = #009E73  Wong Bluish Green
+   Orange (warning)     = #E69F00  Wong Orange
+   Vermilion (danger)   = #D55E00  Wong Vermilion
+   Purple (EUR-Lex)     = #CC79A7  Wong Reddish Purple
+   Sky Blue (badges)    = #56B4E9  Wong Sky Blue
+── */
+:root {
+  --bg:          #f2f0eb;
+  --surface:     #ffffff;
+  --surface2:    #f7f5f0;
+  --border:      #d4cfc6;
+  --border2:     #bfb9af;
+  --accent:      #009E73;   /* Wong Bluish Green  — success/sync  */
+  --accent2:     #0072B2;   /* Wong Blue          — primary interactive */
+  --accent3:     #E69F00;   /* Wong Orange        — warning       */
+  --danger:      #D55E00;   /* Wong Vermilion     — error/delete  */
+  --eurlex:      #CC79A7;   /* Wong Reddish Purple— EUR-Lex       */
+  --sky:         #56B4E9;   /* Wong Sky Blue      — badges/info   */
+  --text:        #1a1714;
+  --text-dim:    #4a4540;
+  --text-muted:  #6b6560;
+  --mono:        'JetBrains Mono', 'Fira Code', monospace;
+  --sans:        -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --radius:      6px;
+  --radius-lg:   10px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* ── Layout ── */
+.shell { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 20px;
+  height: 52px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.topbar-brand { display: flex; align-items: center; gap: 10px; }
+.topbar-logo {
+  width: 28px; height: 28px;
+  background: var(--accent);
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 13px; color: #fff; letter-spacing: -0.5px;
+}
+.topbar-title { font-weight: 600; font-size: 14px; }
+.topbar-sub { font-size: 11px; color: var(--text-dim); }
+.topbar-spacer { flex: 1; }
+.sync-pill {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; color: var(--text-dim);
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  transition: all 0.2s;
+}
+.sync-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  transition: background 0.3s;
+}
+.sync-dot.green  { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+.sync-dot.orange { background: var(--accent3); box-shadow: 0 0 6px var(--accent3); }
+.sync-dot.red    { background: var(--danger);  box-shadow: 0 0 6px var(--danger);  }
+
+.content { display: flex; flex: 1; overflow: hidden; }
+
+/* ── Sidebar ── */
+.sidebar {
+  width: 200px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  overflow-y: auto;
+}
+.sidebar-section { padding: 12px 0 4px; }
+.sidebar-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 0 14px 6px;
+}
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  cursor: pointer;
+  border-radius: 0;
+  color: var(--text-dim);
+  font-size: 12.5px;
+  transition: background 0.15s, color 0.15s;
+  border-left: 3px solid transparent;
+  user-select: none;
+}
+.sidebar-item:hover { background: var(--surface2); color: var(--text); }
+.sidebar-item.active {
+  background: rgba(0,158,115,0.12);
+  color: var(--accent);
+  border-left-color: var(--accent);
+}
+.sidebar-item .icon { font-size: 14px; width: 18px; text-align: center; flex-shrink: 0; }
+
+.sidebar-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 8px 14px;
+}
+
+/* ── Main ── */
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  flex-shrink: 0;
+}
+.page-title { font-weight: 600; font-size: 15px; flex: 1; }
+.page-sub { font-size: 11px; color: var(--text-dim); margin-top: 1px; }
+.page-actions { display: flex; gap: 8px; }
+
+.lang-toggles {
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--border2);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  background: var(--surface2);
+  flex-shrink: 0;
+}
+.lang-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  font-size: 11px;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.15s;
+  color: var(--text-dim);
+  background: var(--surface);
+}
+.lang-pill.active {
+  border-color: var(--accent2);
+  background: rgba(0,114,178,0.10);
+  color: var(--accent2);
+}
+.lang-pill:hover { border-color: var(--text-dim); color: var(--text); }
+
+.table-wrap { flex: 1; overflow: auto; }
+
+table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+thead th {
+  position: sticky;
+  top: 0;
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  padding: 9px 12px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-dim);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+tbody tr { border-bottom: 1px solid var(--border2); }
+tbody tr:hover { background: rgba(0,0,0,0.025); }
+tbody td { padding: 8px 12px; vertical-align: middle; }
+td.en-term { font-weight: 500; color: var(--text); }
+td.translation { color: var(--text-dim); font-size: 12px; }
+td.translation.has-value { color: var(--text); }
+td.actions { white-space: nowrap; }
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 7px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+.badge-critical { background: rgba(213,94,0,0.12); color: #D55E00; border: 1px solid rgba(213,94,0,0.25); }
+.badge-category { background: rgba(0,114,178,0.10); color: #0072B2; border: 1px solid rgba(0,114,178,0.20); }
+.badge-provenance { background: rgba(204,121,167,0.12); color: #a0527a; border: 1px solid rgba(204,121,167,0.25); font-family: var(--mono); font-size: 9px; }
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-muted);
+}
+.empty-state .icon { font-size: 40px; margin-bottom: 12px; }
+.empty-state p { font-size: 13px; }
+
+/* ── Tabs ── */
+.tab-bar {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+  padding: 0 20px;
+  background: var(--surface);
+  flex-shrink: 0;
+}
+.tab-btn {
+  padding: 12px 16px;
+  font-size: 13px;
+  cursor: pointer;
+  color: var(--text-dim);
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s;
+  white-space: nowrap;
+  background: none;
+  border-top: none;
+  border-left: none;
+  border-right: none;
+}
+.tab-btn:hover { color: var(--text); }
+.tab-btn.active { color: var(--text); border-bottom-color: var(--accent2); font-weight: 500; }
+
+/* ── Buttons ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: var(--radius);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.15s;
+  white-space: nowrap;
+  font-family: var(--sans);
+}
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.btn-primary:hover:not(:disabled) { background: #00c78e; border-color: #007a57; }
+.btn-secondary { background: transparent; color: var(--accent2); border-color: var(--accent2); }
+.btn-secondary:hover:not(:disabled) { background: rgba(0,114,178,0.08); }
+.btn-outline { background: transparent; color: var(--text); border-color: var(--border); }
+.btn-outline:hover:not(:disabled) { background: var(--surface2); border-color: var(--text-dim); }
+.btn-ghost { background: transparent; color: var(--text-dim); border-color: transparent; padding: 4px 8px; }
+.btn-ghost:hover { color: var(--text); background: var(--surface2); }
+.btn-danger { background: transparent; color: var(--danger); border-color: var(--danger); }
+.btn-danger:hover:not(:disabled) { background: rgba(213,94,0,0.08); }
+.btn-eurlex { background: rgba(204,121,167,0.12); color: #a0527a; border-color: rgba(204,121,167,0.35); }
+.btn-eurlex:hover:not(:disabled) { background: rgba(204,121,167,0.20); }
+.btn-sm { padding: 3px 8px; font-size: 11px; }
+.btn-xs { padding: 2px 6px; font-size: 10px; }
+
+/* ── Modal ── */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  width: 100%;
+  max-width: 620px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+}
+.modal-header {
+  display: flex;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  gap: 12px;
+  flex-shrink: 0;
+}
+.modal-title { font-weight: 600; font-size: 14px; flex: 1; }
+.modal-body { padding: 20px; overflow-y: auto; flex: 1; }
+.modal-footer {
+  padding: 14px 20px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
+/* ── Form ── */
+.form-group { margin-bottom: 14px; }
+.form-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-dim);
+  margin-bottom: 5px;
+}
+.form-input, .form-select, .form-textarea {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 13px;
+  padding: 7px 10px;
+  transition: border-color 0.15s;
+  outline: none;
+}
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+  border-color: var(--accent2);
+}
+.form-textarea { resize: vertical; min-height: 70px; }
+.form-select option { background: var(--surface); }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.form-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.form-check input { cursor: pointer; accent-color: var(--accent); }
+
+.lang-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-top: 4px;
+}
+.lang-field { display: flex; flex-direction: column; gap: 4px; }
+.lang-label { font-size: 10px; color: var(--text-muted); font-family: var(--mono); }
+
+/* ── EUR-Lex modal specific ── */
+.seed-steps {
+  display: flex;
+  gap: 0;
+  margin-bottom: 20px;
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.seed-step {
+  flex: 1;
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+  color: var(--text-muted);
+  background: var(--surface2);
+  border-right: 1px solid var(--border);
+}
+.seed-step:last-child { border-right: none; }
+.seed-step.active { background: rgba(204,121,167,0.15); color: #a0527a; }
+.seed-step.done { background: rgba(0,158,115,0.12); color: var(--accent); }
+
+.seed-intro { font-size: 12.5px; color: var(--text-dim); line-height: 1.7; margin-bottom: 14px; }
+.seed-provenance {
+  font-size: 11px;
+  font-family: var(--mono);
+  background: rgba(204,121,167,0.08);
+  border: 1px solid rgba(204,121,167,0.25);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+  color: #a0527a;
+  margin-bottom: 14px;
+}
+.seed-lang-select {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.seed-lang-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  font-size: 11px;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.15s;
+  color: var(--text-dim);
+  background: var(--surface);
+}
+.seed-lang-pill.selected {
+  border-color: var(--eurlex);
+  background: rgba(204,121,167,0.12);
+  color: #a0527a;
+}
+
+.seed-progress {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  font-size: 12px;
+  color: var(--text-dim);
+  min-height: 80px;
+  font-family: var(--mono);
+  line-height: 1.7;
+}
+.seed-log-line { display: block; }
+.seed-log-line.ok   { color: var(--accent); }
+.seed-log-line.err  { color: var(--danger); }
+.seed-log-line.info { color: var(--accent2); }
+
+.review-table-wrap { overflow-x: auto; max-height: 340px; overflow-y: auto; }
+.review-table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+.review-table th {
+  position: sticky; top: 0;
+  background: var(--surface2);
+  padding: 7px 10px;
+  text-align: left;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+}
+.review-table td {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border2);
+  vertical-align: middle;
+}
+.review-table tr:hover td { background: rgba(0,0,0,0.02); }
+.import-summary {
+  background: rgba(0,158,115,0.08);
+  border: 1px solid rgba(0,158,115,0.25);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  font-size: 13px;
+  color: var(--accent);
+  margin-bottom: 14px;
+}
+
+/* ── Scoring profiles ── */
+.profile-grid { display: flex; flex-direction: column; gap: 16px; }
+.profile-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+.profile-card-title { font-weight: 600; margin-bottom: 12px; font-size: 13px; }
+.weights-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 10px; }
+.weight-field { display: flex; flex-direction: column; gap: 3px; }
+.weight-label { font-size: 10px; color: var(--text-muted); font-family: var(--mono); }
+
+/* ── Quick Add Presets ── */
+.presets-header {
+  display: flex;
+  gap: 8px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border2);
+  background: var(--surface2);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+.preset-row { display: flex; align-items: center; gap: 12px; padding: 7px 12px; border-bottom: 1px solid var(--border2); }
+.preset-src { color: var(--text); font-size: 12.5px; }
+.preset-arrow { color: var(--text-muted); }
+.preset-tgt { color: var(--text-dim); font-size: 12.5px; }
+
+/* ── Export ── */
+.export-panel {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex: 1;
+  overflow-y: auto;
+}
+.export-block {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.export-block-header {
+  display: flex;
+  align-items: center;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border2);
+  gap: 10px;
+}
+.export-block-title { font-weight: 600; font-size: 12px; flex: 1; }
+.export-textarea {
+  width: 100%;
+  background: var(--bg);
+  border: none;
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 12px 14px;
+  resize: vertical;
+  min-height: 120px;
+  outline: none;
+  line-height: 1.6;
+}
+
+/* ── Toast ── */
+.toast {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 16px;
+  font-size: 12.5px;
+  color: var(--text);
+  z-index: 9999;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: all 0.2s;
+  max-width: 320px;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.success { border-color: var(--accent); color: var(--accent); }
+.toast.error   { border-color: var(--danger);  color: var(--danger);  }
+
+/* ── Misc ── */
+.spinner {
+  display: inline-block;
+  width: 14px; height: 14px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent2);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.search-input {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 12.5px;
+  padding: 5px 10px;
+  outline: none;
+  width: 200px;
+  font-family: var(--sans);
+  transition: border-color 0.15s;
+}
+.search-input:focus { border-color: var(--accent2); }
+.search-input::placeholder { color: var(--text-muted); }
+
+code { font-family: var(--mono); font-size: 10.5px; background: var(--surface2); padding: 1px 5px; border-radius: 3px; color: #0072B2; }
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- ── Topbar ── -->
+  <div class="topbar">
+    <div class="topbar-brand">
+      <div class="topbar-logo">CQ</div>
+      <div>
+        <div class="topbar-title">CertifiedIQ</div>
+        <div class="topbar-sub">Regulatory Term Database</div>
+      </div>
+    </div>
+    <div class="topbar-spacer"></div>
+    <div class="sync-pill" id="syncPill">
+      <div class="sync-dot" id="syncDot"></div>
+      <span id="syncLabel">Connecting…</span>
+    </div>
+    <button class="btn btn-outline btn-sm" onclick="exportAll()">⎘ Export JS</button>
+  </div>
+
+  <div class="content">
+
+    <!-- ── Sidebar ── -->
+    <div class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-label">Glossary</div>
+        <div class="sidebar-item" id="nav-food" onclick="selectSector('food')">
+          <span class="icon">🍽</span> Food &amp; Hospitality
+        </div>
+        <div class="sidebar-item" id="nav-homecare" onclick="selectSector('homecare')">
+          <span class="icon">🏠</span> Homecare
+        </div>
+        <div class="sidebar-item" id="nav-construction" onclick="selectSector('construction')">
+          <span class="icon">🏗</span> Construction
+        </div>
+        <div class="sidebar-item" id="nav-transport" onclick="selectSector('transport')">
+          <span class="icon">🚛</span> Transport
+        </div>
+        <div class="sidebar-item" id="nav-manufacturing" onclick="selectSector('manufacturing')">
+          <span class="icon">🏭</span> Manufacturing
+        </div>
+      </div>
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">Tools</div>
+        <div class="sidebar-item" id="nav-presets" onclick="selectView('presets')">
+          <span class="icon">⚡</span> Quick Add Presets
+        </div>
+        <div class="sidebar-item" id="nav-profiles" onclick="selectView('profiles')">
+          <span class="icon">⚙</span> Scoring Profiles
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Main ── -->
+    <div class="main" id="mainArea">
+      <!-- populated dynamically -->
+      <div class="empty-state" style="margin:auto">
+        <div class="icon">📋</div>
+        <p>Select a sector from the sidebar to get started.</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── Add/Edit Term Modal ── -->
+<div class="modal-overlay" id="termModal">
+  <div class="modal" style="max-width:700px">
+    <div class="modal-header">
+      <span class="modal-title" id="termModalTitle">Add Term</span>
+      <button class="btn btn-ghost" onclick="closeModal('termModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">English Term *</label>
+          <input class="form-input" id="f_en_term" placeholder="e.g. Hand Hygiene">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Category</label>
+          <input class="form-input" id="f_category" placeholder="e.g. Safety">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Sector</label>
+          <select class="form-select" id="f_sector">
+            <option value="food">Food &amp; Hospitality</option>
+            <option value="homecare">Homecare</option>
+            <option value="construction">Construction</option>
+            <option value="transport">Transport</option>
+            <option value="manufacturing">Manufacturing</option>
+          </select>
+        </div>
+        <div class="form-group" style="padding-top:22px">
+          <label class="form-check">
+            <input type="checkbox" id="f_critical">
+            Mark as Critical Term
+          </label>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Translations</label>
+        <div class="lang-grid" id="termLangGrid"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('termModal')">Cancel</button>
+      <button class="btn btn-primary" id="termSaveBtn" onclick="saveTerm()">Save Term</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── EUR-Lex Seed Modal ── -->
+<div class="modal-overlay" id="eurlexModal">
+  <div class="modal" style="max-width:860px">
+    <div class="modal-header">
+      <span class="modal-title">🌐 Seed from EUR-Lex — EU Regulation 1169/2011 Annex II</span>
+      <button class="btn btn-ghost" onclick="closeModal('eurlexModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="seed-steps">
+        <div class="seed-step active" id="seedStep1">1 · Generate</div>
+        <div class="seed-step" id="seedStep2">2 · Review</div>
+        <div class="seed-step" id="seedStep3">3 · Import</div>
+      </div>
+
+      <!-- Step 1 -->
+      <div id="seedPanel1">
+        <p class="seed-intro">
+          Extracts all 14 mandatory allergens from <code>EU Regulation 1169/2011 Annex II</code> and generates
+          validated translations across your target languages via Claude (Cloudflare Worker proxy).<br><br>
+          EU language translations are sourced from official regulation text. UK English and Afrikaans use
+          best available regulatory practice. Each term is stamped with provenance <code>EUR-Lex / 32011R1169</code>.
+        </p>
+        <div class="seed-provenance">
+          ✓ &nbsp;Source: EUR-Lex · CELEX:32011R1169 · Annex II — Substances or products causing allergies or intolerances
+        </div>
+        <p style="font-size:11px;color:var(--text-dim);margin-bottom:8px;font-family:var(--mono)">Select languages to generate:</p>
+        <div class="seed-lang-select" id="seedLangSelect"></div>
+        <p style="font-size:10px;color:var(--text-dim);margin-top:6px;line-height:1.6">
+          Terms already in the database will be skipped. Only net-new allergens are staged for import.
+        </p>
+      </div>
+
+      <!-- Step 2 -->
+      <div id="seedPanel2" style="display:none">
+        <div class="seed-progress" id="seedLog">Calling Claude via Cloudflare Worker proxy…</div>
+      </div>
+
+      <!-- Step 3 -->
+      <div id="seedPanel3" style="display:none">
+        <div class="import-summary" id="importSummary"></div>
+        <div class="review-table-wrap">
+          <table class="review-table" id="reviewTable">
+            <thead>
+              <tr>
+                <th style="width:28px"><input type="checkbox" id="selectAllCheck" onchange="toggleSelectAll(this)"></th>
+                <th>English Term</th>
+                <th>Translations Preview</th>
+                <th>Provenance</th>
+              </tr>
+            </thead>
+            <tbody id="reviewBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer" id="seedFooter">
+      <button class="btn btn-outline" onclick="closeModal('eurlexModal')">Cancel</button>
+      <button class="btn btn-eurlex" id="seedGenerateBtn" onclick="runEurlexExtraction()">🌐 Generate Translations</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Delete Confirm Modal ── -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <span class="modal-title">Delete Term</span>
+      <button class="btn btn-ghost" onclick="closeModal('deleteModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="color:var(--text-dim);font-size:13px">
+        Are you sure you want to delete <strong id="deleteTermName" style="color:var(--text)"></strong>?
+        This cannot be undone.
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('deleteModal')">Cancel</button>
+      <button class="btn btn-danger" id="deleteConfirmBtn">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Add Preset Modal ── -->
+<div class="modal-overlay" id="presetModal">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-header">
+      <span class="modal-title" id="presetModalTitle">Add Preset</span>
+      <button class="btn btn-ghost" onclick="closeModal('presetModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Sector</label>
+          <select class="form-select" id="fp_sector">
+            <option value="food">Food &amp; Hospitality</option>
+            <option value="homecare">Homecare</option>
+            <option value="construction">Construction</option>
+            <option value="transport">Transport</option>
+            <option value="manufacturing">Manufacturing</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Language</label>
+          <select class="form-select" id="fp_lang">
+            <option value="fr">French (fr)</option>
+            <option value="pl">Polish (pl)</option>
+            <option value="ro">Romanian (ro)</option>
+            <option value="uk">Ukrainian (uk)</option>
+            <option value="pt">Portuguese (pt)</option>
+            <option value="es">Spanish (es)</option>
+            <option value="lt">Lithuanian (lt)</option>
+            <option value="de">German (de)</option>
+            <option value="lv">Latvian (lv)</option>
+            <option value="el">Greek (el)</option>
+            <option value="af">Afrikaans (af)</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">English (source)</label>
+          <input class="form-input" id="fp_src" placeholder="English term">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Translation (target)</label>
+          <input class="form-input" id="fp_tgt" placeholder="Translated term">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('presetModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="savePreset()">Save Preset</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─────────────────────────────────────────────────────────────────
+// Config — replace with your Apps Script Web App URL
+// ─────────────────────────────────────────────────────────────────
+const API_URL     = 'https://script.google.com/macros/s/AKfycbwxdbALcuNtcWSg8-1p8-LrsRhBL0EctkSGGKWy4duB_Tqol4BGhkZxGc3j8OgfDaiU/exec';
+const WORKER_URL  = 'https://certifiediq-deepl-proxy.aged-wave-0b52.workers.dev';
+
+// ─────────────────────────────────────────────────────────────────
+// State
+// ─────────────────────────────────────────────────────────────────
+const LANGS = [
+  { code:'fr', label:'French'     },
+  { code:'pl', label:'Polish'     },
+  { code:'ro', label:'Romanian'   },
+  { code:'uk', label:'Ukrainian'  },
+  { code:'pt', label:'Portuguese' },
+  { code:'es', label:'Spanish'    },
+  { code:'lt', label:'Lithuanian' },
+  { code:'de', label:'German'     },
+  { code:'lv', label:'Latvian'    },
+  { code:'el', label:'Greek'      },
+  { code:'af', label:'Afrikaans'  },
+];
+
+const SECTORS = {
+  food:         { label:'Food & Hospitality', icon:'🍽', body:'FSAI' },
+  homecare:     { label:'Homecare',           icon:'🏠', body:'HIQA' },
+  construction: { label:'Construction',       icon:'🏗', body:'HSA'  },
+  transport:    { label:'Transport',          icon:'🚛', body:'RSA'  },
+  manufacturing:{ label:'Manufacturing',      icon:'🏭', body:'HSA'  },
+};
+
+let state = {
+  view:       null,      // current sector key or 'presets'/'profiles'
+  glossary:   [],
+  presets:    [],
+  profiles:   [],
+  visibleLangs: LANGS.map(l => l.code),
+  filterSector: null,
+  filterLang:   null,
+  search:       '',
+  editingTerm:  null,    // { id } or null
+  editingPreset: null,
+  deleteId:     null,
+  eurlexStaged: [],      // staged rows from EUR-Lex extraction
+};
+
+// ─────────────────────────────────────────────────────────────────
+// Init
+// ─────────────────────────────────────────────────────────────────
+async function init() {
+  buildTermLangGrid();
+  setSyncState('connecting', 'Connecting…');
+  await loadAll();
+}
+
+async function loadAll() {
+  try {
+    const [glossary, presets, profiles] = await Promise.all([
+      apiFetch('GET', 'glossary'),
+      apiFetch('GET', 'presets'),
+      apiFetch('GET', 'profiles'),
+    ]);
+    state.glossary = glossary || [];
+    state.presets  = presets  || [];
+    state.profiles = profiles || [];
+    setSyncState('green', '✓ Connected');
+  } catch(e) {
+    setSyncState('red', 'Offline');
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// API
+// ─────────────────────────────────────────────────────────────────
+async function apiFetch(method, resource, body) {
+  const url = `${API_URL}?resource=${resource}`;
+  const opts = {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(url, opts);
+  if (!res.ok) throw new Error(`API ${res.status}`);
+  return res.json();
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Navigation
+// ─────────────────────────────────────────────────────────────────
+function selectSector(key) {
+  state.view = key;
+  state.search = '';
+  document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
+  document.getElementById(`nav-${key}`)?.classList.add('active');
+  renderGlossary();
+}
+
+function selectView(view) {
+  state.view = view;
+  document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
+  document.getElementById(`nav-${view}`)?.classList.add('active');
+  if (view === 'presets')  renderPresets();
+  if (view === 'profiles') renderProfiles();
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Glossary view
+// ─────────────────────────────────────────────────────────────────
+function renderGlossary() {
+  const sector = state.view;
+  const sectorMeta = SECTORS[sector];
+  const rows = state.glossary.filter(r =>
+    r.sector === sector &&
+    (state.search === '' || r.en_term?.toLowerCase().includes(state.search.toLowerCase()))
+  );
+
+  const isFood = sector === 'food';
+
+  const html = `
+    <div class="page-header">
+      <div>
+        <div class="page-title">${sectorMeta.icon} ${sectorMeta.label} Glossary</div>
+        <div class="page-sub">${rows.length} term${rows.length!==1?'s':''} · Regulatory body: ${sectorMeta.body}</div>
+      </div>
+      <div class="page-actions">
+        <input class="search-input" placeholder="Search terms…" value="${esc(state.search)}" oninput="onSearch(this.value)">
+        ${isFood ? `<button class="btn btn-eurlex" onclick="openEurlexSeed()">🌐 Seed EUR-Lex</button>` : ''}
+        <button class="btn btn-primary" onclick="openAddTerm()">+ Add Term</button>
+      </div>
+    </div>
+    <div class="lang-toggles">
+      ${LANGS.map(l => `
+        <div class="lang-pill${state.visibleLangs.includes(l.code)?' active':''}" onclick="toggleLang('${l.code}')">
+          ${l.label} <span style="font-family:var(--mono);font-size:10px">${l.code}</span>
+        </div>
+      `).join('')}
+    </div>
+    <div class="table-wrap">
+      ${rows.length === 0 ? `
+        <div class="empty-state">
+          <div class="icon">📭</div>
+          <p>No terms yet. Add your first term or use 🌐 Seed EUR-Lex${isFood?' to import allergens from EU regulation':' from the Food sector'}.</p>
+        </div>
+      ` : `
+        <table>
+          <thead>
+            <tr>
+              <th>English Term</th>
+              <th>Category</th>
+              ${state.visibleLangs.map(lc => `<th>${LANGS.find(l=>l.code===lc)?.label||lc} <span style="font-family:var(--mono);font-weight:400;font-size:9px">${lc}</span></th>`).join('')}
+              <th style="text-align:right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map(row => `
+              <tr>
+                <td class="en-term">
+                  ${esc(row.en_term)}
+                  ${row.critical ? '<span class="badge badge-critical" style="margin-left:6px">Critical</span>' : ''}
+                  ${row.provenance ? `<span class="badge badge-provenance" style="margin-left:4px" title="${esc(row.provenance)}">EUR-Lex</span>` : ''}
+                </td>
+                <td><span class="badge badge-category">${esc(row.category||'—')}</span></td>
+                ${state.visibleLangs.map(lc => `<td class="translation${row[lc]?' has-value':''}">${esc(row[lc]||'—')}</td>`).join('')}
+                <td class="actions" style="text-align:right">
+                  <button class="btn btn-ghost btn-xs" onclick="openEditTerm('${row.id}')">✎ Edit</button>
+                  <button class="btn btn-ghost btn-xs" style="color:var(--danger)" onclick="openDelete('${row.id}','${esc(row.en_term)}')">✕</button>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `}
+    </div>
+  `;
+  document.getElementById('mainArea').innerHTML = html;
+}
+
+function onSearch(val) {
+  state.search = val;
+  renderGlossary();
+}
+
+function toggleLang(code) {
+  if (state.visibleLangs.includes(code)) {
+    if (state.visibleLangs.length > 1) state.visibleLangs = state.visibleLangs.filter(l => l !== code);
+  } else {
+    state.visibleLangs.push(code);
+  }
+  renderGlossary();
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Add/Edit term modal
+// ─────────────────────────────────────────────────────────────────
+function buildTermLangGrid() {
+  const grid = document.getElementById('termLangGrid');
+  grid.innerHTML = LANGS.map(l => `
+    <div class="lang-field">
+      <span class="lang-label">${l.label} (${l.code})</span>
+      <input class="form-input" id="f_${l.code}" placeholder="${l.label}…">
+    </div>
+  `).join('');
+}
+
+function openAddTerm() {
+  state.editingTerm = null;
+  document.getElementById('termModalTitle').textContent = 'Add Term';
+  document.getElementById('termSaveBtn').textContent = 'Save Term';
+  document.getElementById('f_en_term').value = '';
+  document.getElementById('f_category').value = '';
+  document.getElementById('f_critical').checked = false;
+  document.getElementById('f_sector').value = state.view || 'food';
+  LANGS.forEach(l => { document.getElementById(`f_${l.code}`).value = ''; });
+  openModal('termModal');
+}
+
+function openEditTerm(id) {
+  const row = state.glossary.find(r => r.id === id);
+  if (!row) return;
+  state.editingTerm = row;
+  document.getElementById('termModalTitle').textContent = 'Edit Term';
+  document.getElementById('termSaveBtn').textContent = 'Save Changes';
+  document.getElementById('f_en_term').value  = row.en_term  || '';
+  document.getElementById('f_category').value = row.category || '';
+  document.getElementById('f_critical').checked = !!row.critical;
+  document.getElementById('f_sector').value   = row.sector   || state.view || 'food';
+  LANGS.forEach(l => { document.getElementById(`f_${l.code}`).value = row[l.code] || ''; });
+  openModal('termModal');
+}
+
+async function saveTerm() {
+  const en_term = document.getElementById('f_en_term').value.trim();
+  if (!en_term) { toast('English term is required', 'error'); return; }
+  const btn = document.getElementById('termSaveBtn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  const payload = {
+    id:       state.editingTerm?.id || newId(),
+    sector:   document.getElementById('f_sector').value,
+    en_term,
+    category: document.getElementById('f_category').value.trim(),
+    critical: document.getElementById('f_critical').checked,
+  };
+  LANGS.forEach(l => { payload[l.code] = document.getElementById(`f_${l.code}`).value.trim(); });
+  try {
+    if (state.editingTerm) {
+      await apiFetch('PUT', 'glossary', payload);
+      const idx = state.glossary.findIndex(r => r.id === payload.id);
+      if (idx >= 0) state.glossary[idx] = payload;
+    } else {
+      await apiFetch('POST', 'glossary', payload);
+      state.glossary.push(payload);
+    }
+    closeModal('termModal');
+    toast(state.editingTerm ? 'Term updated' : 'Term added', 'success');
+    if (state.view === payload.sector) renderGlossary();
+  } catch(e) {
+    toast('Save failed: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = state.editingTerm ? 'Save Changes' : 'Save Term';
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Delete
+// ─────────────────────────────────────────────────────────────────
+function openDelete(id, name) {
+  state.deleteId = id;
+  document.getElementById('deleteTermName').textContent = name;
+  const btn = document.getElementById('deleteConfirmBtn');
+  btn.onclick = confirmDelete;
+  openModal('deleteModal');
+}
+
+async function confirmDelete() {
+  const btn = document.getElementById('deleteConfirmBtn');
+  btn.disabled = true; btn.textContent = 'Deleting…';
+  try {
+    await apiFetch('DELETE', 'glossary', { id: state.deleteId });
+    state.glossary = state.glossary.filter(r => r.id !== state.deleteId);
+    closeModal('deleteModal');
+    toast('Term deleted', 'success');
+    renderGlossary();
+  } catch(e) {
+    toast('Delete failed', 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Delete';
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// EUR-Lex Seed
+// ─────────────────────────────────────────────────────────────────
+const EURLEX_ALLERGENS = [
+  'Cereals containing gluten','Crustaceans','Eggs','Fish','Peanuts',
+  'Soybeans','Milk','Nuts','Celery','Mustard','Sesame seeds',
+  'Sulphur dioxide and sulphites','Lupin','Molluscs',
+];
+
+function openEurlexSeed() {
+  // Reset to step 1
+  setSeedStep(1);
+  // Build lang select
+  const container = document.getElementById('seedLangSelect');
+  container.innerHTML = LANGS.map(l => `
+    <div class="seed-lang-pill selected" data-code="${l.code}" onclick="toggleSeedLang(this)">
+      ✓ ${l.label} <span style="font-family:var(--mono);font-size:10px">${l.code}</span>
+    </div>
+  `).join('');
+  document.getElementById('seedFooter').innerHTML = `
+    <button class="btn btn-outline" onclick="closeModal('eurlexModal')">Cancel</button>
+    <button class="btn btn-eurlex" id="seedGenerateBtn" onclick="runEurlexExtraction()">🌐 Generate Translations</button>
+  `;
+  openModal('eurlexModal');
+}
+
+function toggleSeedLang(el) {
+  el.classList.toggle('selected');
+  if (el.classList.contains('selected')) {
+    el.innerHTML = `✓ ${el.innerHTML.replace(/^[✓✗]\s*/,'')}`;
+  } else {
+    el.innerHTML = el.innerHTML.replace(/^✓\s*/,'');
+  }
+}
+
+function setSeedStep(n) {
+  [1,2,3].forEach(i => {
+    const step = document.getElementById(`seedStep${i}`);
+    const panel = document.getElementById(`seedPanel${i}`);
+    if (!step || !panel) return;
+    step.className = 'seed-step' + (i < n ? ' done' : (i === n ? ' active' : ''));
+    panel.style.display = i === n ? '' : 'none';
+  });
+}
+
+async function runEurlexExtraction() {
+  const selectedLangs = [...document.querySelectorAll('.seed-lang-pill.selected')].map(el => el.dataset.code);
+  if (selectedLangs.length === 0) { toast('Select at least one language', 'error'); return; }
+
+  const existingTerms = state.glossary
+    .filter(r => r.sector === 'food')
+    .map(r => r.en_term.toLowerCase());
+
+  const allergensToDo = EURLEX_ALLERGENS.filter(a => !existingTerms.includes(a.toLowerCase()));
+
+  setSeedStep(2);
+  document.getElementById('seedFooter').innerHTML = `
+    <button class="btn btn-outline" onclick="closeModal('eurlexModal')">Cancel</button>
+    <span style="font-size:11px;color:var(--text-dim);display:flex;align-items:center;gap:6px">
+      <span class="spinner"></span> Generating translations via Claude…
+    </span>
+  `;
+
+  const log = document.getElementById('seedLog');
+  const addLog = (msg, type='') => {
+    log.innerHTML += `<span class="seed-log-line ${type}">${esc(msg)}</span>\n`;
+    log.scrollTop = log.scrollHeight;
+  };
+
+  log.innerHTML = '';
+  addLog(`Found ${allergensToDo.length} allergen(s) to seed (${EURLEX_ALLERGENS.length - allergensToDo.length} already in database).`, 'info');
+  addLog(`Target languages: ${selectedLangs.join(', ')}`, 'info');
+  addLog(`Calling Claude via Cloudflare Worker proxy…`);
+
+  const prompt = `You are a regulatory translation expert. Using the official text of EU Regulation (EU) No 1169/2011 Annex II (the 14 mandatory allergens), provide translations for the following allergen terms into these languages: ${selectedLangs.join(', ')}.
+
+Use ISO 639-1 codes as keys. For EU official languages (fr, pl, ro, pt, es, lt, de, lv, el), use the exact official EU regulation text. For Ukrainian (uk) use standard medical/food safety Ukrainian. For Afrikaans (af) use recognised South African food safety terminology.
+
+Terms to translate: ${allergensToDo.join('; ')}
+
+Respond ONLY with a valid JSON array, no markdown, no preamble:
+[
+  {
+    "en": "Cereals containing gluten",
+    "fr": "...",
+    "pl": "...",
+    ...
+  },
+  ...
+]`;
+
+  let result;
+  try {
+    const res = await fetch(`${WORKER_URL}/claude`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 4000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    if (!res.ok) throw new Error(`Worker returned ${res.status}`);
+    const data = await res.json();
+    const raw = data.content?.[0]?.text || '';
+    addLog('Response received. Parsing…', 'info');
+    let clean = raw.replace(/```json|```/g,'').trim();
+    result = JSON.parse(clean);
+    addLog(`✓ Parsed ${result.length} allergen term(s).`, 'ok');
+  } catch(e) {
+    addLog(`✗ Error: ${e.message}`, 'err');
+    document.getElementById('seedFooter').innerHTML = `
+      <button class="btn btn-outline" onclick="closeModal('eurlexModal')">Close</button>
+      <button class="btn btn-eurlex" onclick="openEurlexSeed()">↩ Try Again</button>
+    `;
+    return;
+  }
+
+  state.eurlexStaged = result.map(r => ({
+    id: newId(),
+    sector: 'food',
+    en_term: r.en,
+    category: 'Allergen',
+    critical: true,
+    provenance: 'EUR-Lex / 32011R1169',
+    ...selectedLangs.reduce((acc, lc) => { acc[lc] = r[lc] || ''; return acc; }, {})
+  }));
+
+  // Build review table
+  setSeedStep(3);
+
+  document.getElementById('importSummary').innerHTML =
+    `🌐 ${state.eurlexStaged.length} allergen term${state.eurlexStaged.length!==1?'s':''} ready to import — sourced from EUR-Lex / CELEX:32011R1169 Annex II.`;
+
+  const tbody = document.getElementById('reviewBody');
+  const previewLangs = selectedLangs.slice(0, 4);
+  tbody.innerHTML = state.eurlexStaged.map((row, i) => `
+    <tr>
+      <td><input type="checkbox" class="row-check" data-idx="${i}" checked></td>
+      <td style="font-weight:500">${esc(row.en_term)}</td>
+      <td style="font-family:var(--mono);font-size:10.5px;color:var(--text-dim)">
+        ${previewLangs.map(lc => `<span title="${lc}">${esc(row[lc]||'—')}</span>`).join(' · ')}
+        ${selectedLangs.length > 4 ? `<span style="color:var(--text-muted)"> +${selectedLangs.length-4} more</span>` : ''}
+      </td>
+      <td><span class="badge badge-provenance">EUR-Lex / 32011R1169</span></td>
+    </tr>
+  `).join('');
+
+  document.getElementById('seedFooter').innerHTML = `
+    <button class="btn btn-outline" onclick="closeModal('eurlexModal')">Cancel</button>
+    <button class="btn btn-primary" onclick="importEurlexTerms()">⬇ Import Selected</button>
+  `;
+}
+
+function toggleSelectAll(cb) {
+  document.querySelectorAll('.row-check').forEach(el => el.checked = cb.checked);
+}
+
+async function importEurlexTerms() {
+  const checked = [...document.querySelectorAll('.row-check:checked')].map(el => parseInt(el.dataset.idx));
+  const toImport = checked.map(i => state.eurlexStaged[i]);
+  if (toImport.length === 0) { toast('Nothing selected', 'error'); return; }
+
+  document.getElementById('seedFooter').innerHTML = `
+    <span style="font-size:11px;color:var(--text-dim);display:flex;align-items:center;gap:6px">
+      <span class="spinner"></span> Writing to Google Sheet…
+    </span>
+  `;
+
+  let ok = 0, failed = 0;
+  for (const row of toImport) {
+    try {
+      await apiFetch('POST', 'glossary', row);
+      state.glossary.push(row);
+      ok++;
+      await sleep(600); // 600ms delay between writes
+    } catch(e) {
+      failed++;
+    }
+  }
+
+  document.getElementById('importSummary').innerHTML =
+    `✓ ${ok} term${ok!==1?'s':''} imported to database${failed ? ` · ${failed} failed` : ''}.`;
+  document.getElementById('seedFooter').innerHTML = `
+    <button class="btn btn-outline" onclick="closeModal('eurlexModal');renderGlossary()">Close &amp; Refresh</button>
+  `;
+  if (ok > 0) toast(`${ok} allergen term${ok!==1?'s':''} imported`, 'success');
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Presets view
+// ─────────────────────────────────────────────────────────────────
+function renderPresets() {
+  const filterSector = state.filterSector || 'food';
+  const filterLang   = state.filterLang   || 'pl';
+  const rows = state.presets.filter(r =>
+    (!filterSector || r.sector === filterSector) &&
+    (!filterLang   || r.language === filterLang)
+  );
+
+  const html = `
+    <div class="page-header">
+      <div>
+        <div class="page-title">⚡ Quick Add Presets</div>
+        <div class="page-sub">${rows.length} preset${rows.length!==1?'s':''} · These populate the Quick Add panel in the Translation Validator</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-primary" onclick="openAddPreset()">+ Add Preset</button>
+      </div>
+    </div>
+    <div class="presets-header">
+      <select class="form-select" style="width:180px" onchange="state.filterSector=this.value;renderPresets()">
+        ${Object.entries(SECTORS).map(([k,v]) => `<option value="${k}"${filterSector===k?' selected':''}>${v.label}</option>`).join('')}
+      </select>
+      <select class="form-select" style="width:160px" onchange="state.filterLang=this.value;renderPresets()">
+        ${LANGS.map(l => `<option value="${l.code}"${filterLang===l.code?' selected':''}>${l.label} (${l.code})</option>`).join('')}
+      </select>
+    </div>
+    <div class="table-wrap">
+      ${rows.length === 0 ? `<div class="empty-state"><div class="icon">⚡</div><p>No presets for this filter.</p></div>` : `
+        <table>
+          <thead>
+            <tr>
+              <th>English (source)</th>
+              <th>Translation (target)</th>
+              <th style="text-align:right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map(row => `
+              <tr>
+                <td class="preset-src">${esc(row.src)}</td>
+                <td class="preset-tgt">${esc(row.tgt)}</td>
+                <td class="actions" style="text-align:right">
+                  <button class="btn btn-ghost btn-xs" style="color:var(--danger)" onclick="deletePreset('${row.id}')">✕</button>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `}
+    </div>
+  `;
+  document.getElementById('mainArea').innerHTML = html;
+}
+
+function openAddPreset() {
+  document.getElementById('presetModalTitle').textContent = 'Add Preset';
+  document.getElementById('fp_sector').value = state.filterSector || 'food';
+  document.getElementById('fp_lang').value   = state.filterLang   || 'pl';
+  document.getElementById('fp_src').value = '';
+  document.getElementById('fp_tgt').value = '';
+  openModal('presetModal');
+}
+
+async function savePreset() {
+  const src = document.getElementById('fp_src').value.trim();
+  const tgt = document.getElementById('fp_tgt').value.trim();
+  if (!src || !tgt) { toast('Both fields required', 'error'); return; }
+  const payload = {
+    id: newId(),
+    sector:   document.getElementById('fp_sector').value,
+    language: document.getElementById('fp_lang').value,
+    src, tgt,
+  };
+  try {
+    await apiFetch('POST', 'presets', payload);
+    state.presets.push(payload);
+    closeModal('presetModal');
+    toast('Preset added', 'success');
+    renderPresets();
+  } catch(e) {
+    toast('Save failed', 'error');
+  }
+}
+
+async function deletePreset(id) {
+  if (!confirm('Delete this preset?')) return;
+  try {
+    await apiFetch('DELETE', 'presets', { id });
+    state.presets = state.presets.filter(r => r.id !== id);
+    toast('Preset deleted', 'success');
+    renderPresets();
+  } catch(e) {
+    toast('Delete failed', 'error');
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Scoring Profiles view
+// ─────────────────────────────────────────────────────────────────
+function renderProfiles() {
+  const profiles = state.profiles;
+  const html = `
+    <div class="page-header">
+      <div>
+        <div class="page-title">⚙ Scoring Profiles</div>
+        <div class="page-sub">Category weights and extra criteria injected into the Claude scoring prompt</div>
+      </div>
+    </div>
+    <div class="export-panel">
+      ${profiles.length === 0 ? `<div class="empty-state"><div class="icon">⚙</div><p>No scoring profiles found. Ensure your Apps Script has seeded profile data.</p></div>` :
+        profiles.map((p, pi) => `
+          <div class="profile-card" id="profileCard${pi}">
+            <div class="profile-card-title">${esc(p.body||p.sector)} · ${esc(p.fullName||p.sector)}</div>
+            <div class="weights-grid">
+              ${['terminology','professional','safety','completeness','grammar','fluency'].map(w => `
+                <div class="weight-field">
+                  <span class="weight-label">w_${w}</span>
+                  <input class="form-input" value="${p['w_'+w]||''}" id="pw_${pi}_${w}" oninput="markProfileDirty(${pi})">
+                </div>
+              `).join('')}
+            </div>
+            <div class="form-group">
+              <label class="form-label">Extra Criteria (injected into scoring prompt)</label>
+              <textarea class="form-textarea" id="pec_${pi}" oninput="markProfileDirty(${pi})">${esc(p.extraCriteria||'')}</textarea>
+            </div>
+            <div style="text-align:right">
+              <button class="btn btn-primary btn-sm" id="pSave${pi}" onclick="saveProfile(${pi})">Save</button>
+            </div>
+          </div>
+        `).join('')
+      }
+    </div>
+  `;
+  document.getElementById('mainArea').innerHTML = html;
+}
+
+function markProfileDirty(pi) {
+  const btn = document.getElementById(`pSave${pi}`);
+  if (btn) btn.style.borderColor = 'var(--accent3)';
+}
+
+async function saveProfile(pi) {
+  const p = { ...state.profiles[pi] };
+  ['terminology','professional','safety','completeness','grammar','fluency'].forEach(w => {
+    p['w_'+w] = document.getElementById(`pw_${pi}_${w}`)?.value || p['w_'+w];
+  });
+  p.extraCriteria = document.getElementById(`pec_${pi}`)?.value || '';
+  try {
+    await apiFetch('PUT', 'profiles', p);
+    state.profiles[pi] = p;
+    toast('Profile saved', 'success');
+    const btn = document.getElementById(`pSave${pi}`);
+    if (btn) btn.style.borderColor = '';
+  } catch(e) {
+    toast('Save failed', 'error');
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Export JS
+// ─────────────────────────────────────────────────────────────────
+function exportAll() {
+  // Build SECTOR_GLOSSARIES
+  const bySecLang = {};
+  state.glossary.forEach(row => {
+    if (!bySecLang[row.sector]) bySecLang[row.sector] = {};
+    LANGS.forEach(l => {
+      if (!bySecLang[row.sector][l.code]) bySecLang[row.sector][l.code] = [];
+      if (row[l.code]) bySecLang[row.sector][l.code].push({ en: row.en_term, tl: row[l.code], critical: !!row.critical });
+    });
+  });
+
+  // Build TRANSLATION_PRESETS
+  const bySecLangP = {};
+  state.presets.forEach(row => {
+    const key = `${row.sector}__${row.language}`;
+    if (!bySecLangP[key]) bySecLangP[key] = [];
+    bySecLangP[key].push({ src: row.src, tgt: row.tgt });
+  });
+
+  // Build REGULATORY_PROFILES
+  const profObj = {};
+  state.profiles.forEach(p => { profObj[p.sector] = p; });
+
+  const exportWin = window.open('', '_blank');
+  exportWin.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>CertifiedIQ Export</title>
+<style>body{background:#f2f0eb;color:#1a1714;font-family:monospace;padding:20px}
+textarea{width:100%;background:#ffffff;color:#1a1714;border:1px solid #d4cfc6;border-radius:6px;padding:12px;font-size:11px;margin-bottom:16px;min-height:200px}
+h3{color:#6b6560;font-size:11px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+button{background:#009E73;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;margin-right:8px;font-size:12px}
+</style></head><body>
+<h2 style="color:#1a1714;margin-bottom:20px">⎘ CertifiedIQ Export</h2>
+<h3>SECTOR_GLOSSARIES</h3>
+<textarea onclick="this.select()">${JSON.stringify(bySecLang, null, 2)}</textarea>
+<h3>TRANSLATION_PRESETS</h3>
+<textarea onclick="this.select()">${JSON.stringify(bySecLangP, null, 2)}</textarea>
+<h3>REGULATORY_PROFILES</h3>
+<textarea onclick="this.select()">${JSON.stringify(profObj, null, 2)}</textarea>
+</body></html>`);
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Sync indicator
+// ─────────────────────────────────────────────────────────────────
+function setSyncState(state, label) {
+  const dot = document.getElementById('syncDot');
+  const lbl = document.getElementById('syncLabel');
+  dot.className = 'sync-dot ' + state;
+  lbl.textContent = label;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Modal helpers
+// ─────────────────────────────────────────────────────────────────
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) overlay.classList.remove('open');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────────
+function newId() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+function esc(s) {
+  if (s == null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function toast(msg, type='') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast ' + type + ' show';
+  setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Start
+// ─────────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
