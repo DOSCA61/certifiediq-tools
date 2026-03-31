@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CertifiedIQ — Your Training</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:      #0d0f14;
+    --surface: #141720;
+    --border:  #1f2330;
+    --accent:  #3b82f6;
+    --accent2: #06b6d4;
+    --success: #10b981;
+    --danger:  #ef4444;
+    --warning: #f59e0b;
+    --text:    #e2e8f0;
+    --muted:   #64748b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; }
+
+  header {
+    display: flex; align-items: center;
+    padding: 0 24px; height: 52px;
+    background: #080a0e; border-bottom: 1px solid var(--border);
+  }
+  .logo {
+    font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 800;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+
+  .state { display: none; }
+  .state.active { display: block; }
+
+  #state-loading {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; min-height: 60vh; gap: 16px;
+  }
+  .spinner {
+    width: 36px; height: 36px;
+    border: 3px solid var(--border); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  #state-error {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; min-height: 60vh;
+    text-align: center; padding: 40px; gap: 12px;
+  }
+  #state-error .icon { font-size: 48px; }
+  #state-error h2 { font-family: 'Syne', sans-serif; font-size: 22px; }
+  #state-error p  { color: var(--muted); max-width: 420px; line-height: 1.6; font-size: 13px; }
+
+  #state-training { max-width: 720px; margin: 0 auto; padding: 28px 20px 60px; }
+
+  .welcome {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px 24px; margin-bottom: 24px;
+    display: flex; align-items: center; gap: 16px;
+  }
+  .welcome-avatar {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; flex-shrink: 0;
+  }
+  .welcome-name { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 700; }
+  .welcome-sub  { font-size: 13px; color: var(--muted); margin-top: 2px; }
+
+  .progress-wrap { margin-bottom: 24px; }
+  .progress-label {
+    display: flex; justify-content: space-between;
+    font-size: 12px; font-family: 'DM Mono', monospace;
+    color: var(--muted); margin-bottom: 8px;
+  }
+  .progress-track { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .progress-fill {
+    height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 2px; transition: width 0.4s ease; width: 0%;
+  }
+
+  .section-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; overflow: hidden; margin-bottom: 16px;
+    transition: border-color 0.2s;
+  }
+  .section-card.current { border-color: var(--accent); }
+  .section-card.done    { border-color: rgba(16,185,129,0.4); }
+  .section-card.locked  { opacity: 0.5; }
+
+  .section-header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 16px 20px; cursor: pointer;
+  }
+  .section-num {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500;
+    flex-shrink: 0; transition: all 0.2s;
+  }
+  .section-card.done    .section-num { background: var(--success); color: #fff; }
+  .section-card.current .section-num { background: var(--accent);  color: #fff; }
+
+  .section-title-text { font-weight: 600; font-size: 15px; flex: 1; }
+  .section-status { font-size: 11px; font-family: 'DM Mono', monospace; color: var(--muted); }
+
+  .section-body { display: none; padding: 0 20px 20px; }
+  .section-card.current .section-body { display: block; }
+
+  .lesson-text {
+    font-size: 14px; line-height: 1.7; color: #cbd5e1;
+    background: var(--bg); border-radius: 8px; padding: 16px;
+    margin-bottom: 16px; border: 1px solid var(--border);
+  }
+
+  .video-wrap {
+    position: relative; padding-bottom: 56.25%; height: 0;
+    overflow: hidden; border-radius: 8px; background: #000; margin-bottom: 16px;
+  }
+  .video-wrap iframe, .video-wrap video {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;
+  }
+
+  .quiz-label {
+    font-family: 'DM Mono', monospace; font-size: 10px;
+    text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--accent); margin-bottom: 10px;
+  }
+  .quiz-question { font-size: 15px; font-weight: 600; margin-bottom: 14px; line-height: 1.5; }
+  .quiz-options  { display: flex; flex-direction: column; gap: 8px; }
+
+  .quiz-option {
+    padding: 12px 16px; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; cursor: pointer; font-size: 14px; transition: all 0.15s;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .quiz-option:hover:not(.answered) { border-color: var(--accent); background: rgba(59,130,246,0.05); }
+  .quiz-option.correct  { border-color: var(--success); background: rgba(16,185,129,0.08); color: var(--success); }
+  .quiz-option.wrong    { border-color: var(--danger);  background: rgba(239,68,68,0.08);  color: var(--danger); }
+  .quiz-option.revealed { border-color: var(--success); background: rgba(16,185,129,0.05); opacity: 0.7; }
+
+  .option-letter {
+    width: 22px; height: 22px; border-radius: 50%; background: var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-family: 'DM Mono', monospace; font-weight: 600;
+    flex-shrink: 0; transition: background 0.15s;
+  }
+  .quiz-option.correct  .option-letter { background: var(--success); color: #fff; }
+  .quiz-option.wrong    .option-letter { background: var(--danger);  color: #fff; }
+  .quiz-option.revealed .option-letter { background: var(--success); color: #fff; }
+
+  .quiz-feedback {
+    margin-top: 12px; padding: 10px 14px; border-radius: 8px;
+    font-size: 13px; font-weight: 500; display: none;
+  }
+  .quiz-feedback.correct { background: rgba(16,185,129,0.1); color: var(--success); border: 1px solid rgba(16,185,129,0.3); }
+  .quiz-feedback.wrong   { background: rgba(239,68,68,0.08);  color: var(--danger);  border: 1px solid rgba(239,68,68,0.25); }
+
+  .btn-next {
+    display: none; width: 100%; margin-top: 16px; padding: 13px;
+    background: var(--accent); color: #fff; border: none; border-radius: 8px;
+    font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .btn-next:hover { opacity: 0.88; transform: translateY(-1px); }
+
+  #state-result {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; min-height: 70vh; text-align: center; padding: 40px 24px;
+  }
+  .result-icon  { font-size: 64px; margin-bottom: 20px; animation: pop 0.4s ease; }
+  @keyframes pop {
+    0%  { transform: scale(0.5); opacity: 0; }
+    70% { transform: scale(1.1); }
+    100%{ transform: scale(1);   opacity: 1; }
+  }
+  .result-title {
+    font-family: 'Syne', sans-serif; font-size: 32px; font-weight: 800;
+    letter-spacing: -1px; margin-bottom: 8px;
+  }
+  .result-sub   { font-size: 16px; color: var(--muted); margin-bottom: 24px; }
+  .score-big    {
+    font-family: 'Syne', sans-serif; font-size: 56px; font-weight: 800;
+    letter-spacing: -2px; margin-bottom: 24px;
+  }
+  .score-big.pass { color: var(--success); }
+  .score-big.fail { color: var(--danger); }
+
+  .cert-card {
+    background: var(--surface); border: 1px solid rgba(16,185,129,0.4);
+    border-radius: 16px; padding: 28px 36px; max-width: 400px;
+    width: 100%; margin-bottom: 24px;
+  }
+  .cert-card-label {
+    font-family: 'DM Mono', monospace; font-size: 10px;
+    text-transform: uppercase; letter-spacing: 0.12em;
+    color: var(--success); margin-bottom: 12px;
+  }
+  .cert-number {
+    font-family: 'DM Mono', monospace; font-size: 22px; font-weight: 500;
+    letter-spacing: 0.08em; color: var(--text); margin-bottom: 16px;
+  }
+  .cert-detail { font-size: 13px; color: var(--muted); line-height: 1.8; }
+
+  .retry-btn {
+    padding: 12px 28px; background: transparent;
+    border: 1px solid var(--border); border-radius: 8px;
+    color: var(--muted); font-family: 'DM Sans', sans-serif;
+    font-size: 14px; cursor: pointer; transition: all 0.2s; margin-top: 8px;
+  }
+  .retry-btn:hover { border-color: var(--accent); color: var(--text); }
+</style>
+</head>
+<body>
+
+<header><div class="logo">CertifiedIQ</div></header>
+
+<!-- LOADING -->
+<div id="state-loading" class="state active">
+  <div class="spinner"></div>
+  <div style="color:var(--muted);font-size:14px">Loading your training…</div>
+</div>
+
+<!-- ERROR -->
+<div id="state-error" class="state">
+  <div class="icon">⚠️</div>
+  <h2>Something went wrong</h2>
+  <p id="error-msg">This training link is invalid or has expired. Please contact your manager for a new link.</p>
+</div>
+
+<!-- TRAINING -->
+<div id="state-training" class="state">
+  <div class="welcome">
+    <div class="welcome-avatar">👤</div>
+    <div>
+      <div class="welcome-name" id="learner-name">—</div>
+      <div class="welcome-sub"  id="course-name">—</div>
+    </div>
+  </div>
+  <div class="progress-wrap">
+    <div class="progress-label">
+      <span>Progress</span>
+      <span id="progress-text">0 of 0 complete</span>
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+  </div>
+  <div id="video-container" style="margin-bottom:24px;display:none">
+    <div style="font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:8px">Training Video</div>
+    <div class="video-wrap" id="video-wrap"></div>
+  </div>
+  <div id="sections-container"></div>
+</div>
+
+<!-- RESULT -->
+<div id="state-result" class="state">
+  <div class="result-icon"  id="result-icon">🏆</div>
+  <div class="result-title" id="result-title">Training Complete!</div>
+  <div class="result-sub"   id="result-sub">You passed</div>
+  <div class="score-big"    id="result-score">—</div>
+  <div class="cert-card"    id="cert-card" style="display:none">
+    <div class="cert-card-label">🏆 Certificate Issued</div>
+    <div class="cert-number" id="cert-number">—</div>
+    <div class="cert-detail" id="cert-detail">—</div>
+  </div>
+  <button class="retry-btn" id="retry-btn" style="display:none" onclick="retryTraining()">↩ Try Again</button>
+</div>
+
+<script>
+  let API_URL   = '';
+  let enrolment = null;
+  let learner   = null;
+  let course    = null;
+  let quiz      = [];
+  let answers   = {};
+  let currentIdx = 0;
+
+  // ── CORS-safe fetch for Google Apps Script ──
+  async function gasGet(params) {
+    const url = API_URL + '?' + new URLSearchParams(params);
+    // Simple GET with no custom headers — avoids CORS preflight
+    const res  = await fetch(url, { redirect: 'follow' });
+    const text = await res.text();
+    if (text.trim().startsWith('<')) throw new Error('API returned HTML — check deployment');
+    return JSON.parse(text);
+  }
+
+  // ── INIT ──
+  window.onload = async () => {
+    const p     = new URLSearchParams(window.location.search);
+    const token = p.get('token');
+    const api   = p.get('api') || localStorage.getItem('ciq_api_url') || '';
+
+    if (!token) return showError('No training token found in this link.');
+    if (!api)   return showError('API URL missing. Please contact your manager.');
+
+    API_URL = api;
+
+    try {
+      const data = await gasGet({ action: 'getLearnerByToken', token });
+      if (!data.success) return showError(data.error || 'Invalid or expired token.');
+
+      enrolment = data.enrolment;
+      learner   = data.learner;
+      course    = data.course;
+
+      const qData = await gasGet({ action: 'getQuiz', courseID: course.CourseID });
+      quiz = (qData.success && Array.isArray(qData.quiz)) ? qData.quiz : [];
+
+      if (enrolment.Status === 'passed') { showAlreadyPassed(); return; }
+
+      renderTraining();
+      showState('training');
+    } catch(e) {
+      showError('Could not load training: ' + e.message);
+    }
+  };
+
+  // ── RENDER ──
+  function renderTraining() {
+    document.getElementById('learner-name').textContent = learner.FirstName + ' ' + learner.LastName;
+    document.getElementById('course-name').textContent  = course.Title;
+
+    const videoUrl = course.VideoURL || '';
+    if (videoUrl) {
+      const ytId = extractYouTubeId(videoUrl);
+      document.getElementById('video-wrap').innerHTML = ytId
+        ? `<iframe src="https://www.youtube.com/embed/${ytId}" allowfullscreen></iframe>`
+        : `<video src="${videoUrl}" controls></video>`;
+      document.getElementById('video-container').style.display = 'block';
+    }
+
+    updateProgress();
+    renderSections();
+  }
+
+  function renderSections() {
+    const container = document.getElementById('sections-container');
+    if (!quiz.length) {
+      container.innerHTML = `<div style="text-align:center;padding:40px;color:var(--muted)">
+        <div style="font-size:32px;margin-bottom:12px">📋</div>
+        <p>No quiz questions found for this course.</p>
+        <button onclick="completeWithNoQuiz()" style="margin-top:16px;padding:12px 24px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">Mark Complete</button>
+      </div>`;
+      return;
+    }
+
+    container.innerHTML = quiz.map((s, i) => {
+      const done    = answers[i] !== undefined;
+      const current = i === currentIdx;
+      const locked  = i > currentIdx;
+      const letters = ['A','B','C','D'];
+      return `<div class="section-card ${done ? 'done' : current ? 'current' : 'locked'}" id="section-${i}">
+        <div class="section-header">
+          <div class="section-num">${done ? '✓' : i+1}</div>
+          <div class="section-title-text">${s.title || 'Lesson ' + (i+1)}</div>
+          <div class="section-status">${done ? 'Complete' : current ? 'In progress' : 'Locked'}</div>
+        </div>
+        <div class="section-body">
+          ${s.translation ? `<div class="lesson-text">${s.translation}</div>` : ''}
+          ${s.question ? `
+            <div class="quiz-label">📋 Quiz</div>
+            <div class="quiz-question">${s.question}</div>
+            <div class="quiz-options" id="opts-${i}">
+              ${(s.options||[]).map((opt,j)=>`
+                <div class="quiz-option" id="opt-${i}-${j}" onclick="selectAnswer(${i},${j},${s.correctIndex??0})">
+                  <div class="option-letter">${letters[j]||j}</div>
+                  <div>${opt}</div>
+                </div>`).join('')}
+            </div>
+            <div class="quiz-feedback" id="feedback-${i}"></div>
+          ` : ''}
+          <button class="btn-next" id="next-${i}" onclick="nextSection(${i})">
+            ${i < quiz.length-1 ? 'Next Lesson →' : 'Submit & Finish'}
+          </button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // ── INTERACTION ──
+  function selectAnswer(sIdx, chosen, correct) {
+    if (answers[sIdx] !== undefined) return;
+    answers[sIdx] = chosen;
+
+    const isCorrect = chosen === correct;
+    document.querySelectorAll(`#opts-${sIdx} .quiz-option`).forEach((el, j) => {
+      el.classList.add('answered');
+      if (j === correct)        el.classList.add(isCorrect && j===chosen ? 'correct' : 'revealed');
+      if (j === chosen && !isCorrect) el.classList.add('wrong');
+    });
+
+    const fb = document.getElementById(`feedback-${sIdx}`);
+    fb.style.display = 'block';
+    fb.className = 'quiz-feedback ' + (isCorrect ? 'correct' : 'wrong');
+    fb.textContent = isCorrect ? '✓ Correct!' : '✗ Incorrect. Correct answer: ' + quiz[sIdx].options[correct];
+
+    document.getElementById(`next-${sIdx}`).style.display = 'block';
+    updateProgress();
+  }
+
+  function nextSection(i) {
+    if (i < quiz.length - 1) {
+      currentIdx = i + 1;
+      renderSections();
+      setTimeout(() => document.getElementById(`section-${currentIdx}`)?.scrollIntoView({ behavior:'smooth', block:'start' }), 100);
+    } else {
+      submitResults();
+    }
+  }
+
+  async function completeWithNoQuiz() { await submitScore(100); }
+
+  async function submitResults() {
+    const correct = quiz.filter((s, i) => answers[i] === (s.correctIndex ?? 0)).length;
+    await submitScore(Math.round((correct / quiz.length) * 100));
+  }
+
+  async function submitScore(score) {
+    showState('loading');
+    try {
+      const data = await gasGet({
+        action:      'submitQuiz',
+        enrolmentID: enrolment.EnrolmentID,
+        learnerID:   learner.LearnerID,
+        courseID:    course.CourseID,
+        score
+      });
+      showResult(score, data);
+    } catch(e) {
+      showState('training');
+      alert('Error submitting: ' + e.message);
+    }
+  }
+
+  // ── RESULTS ──
+  function showResult(score, data) {
+    const passMark = parseInt(course.PassMark) || 80;
+    const passed   = score >= passMark;
+
+    document.getElementById('result-icon').textContent  = passed ? '🏆' : '📋';
+    document.getElementById('result-title').textContent = passed ? 'Well done!' : 'Keep trying';
+    document.getElementById('result-sub').textContent   = passed
+      ? `You passed with ${score}%`
+      : `You scored ${score}% — ${passMark}% needed to pass`;
+    document.getElementById('result-score').textContent = score + '%';
+    document.getElementById('result-score').className   = 'score-big ' + (passed ? 'pass' : 'fail');
+
+    if (passed && data.certNumber) {
+      document.getElementById('cert-card').style.display = 'block';
+      document.getElementById('cert-number').textContent = data.certNumber;
+      document.getElementById('cert-detail').innerHTML   =
+        `${learner.FirstName} ${learner.LastName}<br>${course.Title}<br>Issued today · Valid 12 months`;
+    }
+    if (!passed) document.getElementById('retry-btn').style.display = 'block';
+    showState('result');
+  }
+
+  function showAlreadyPassed() {
+    document.getElementById('result-icon').textContent  = '🏆';
+    document.getElementById('result-title').textContent = 'Already completed!';
+    document.getElementById('result-sub').textContent   = learner.FirstName + ', you have already passed this training.';
+    document.getElementById('result-score').textContent = '✓';
+    document.getElementById('result-score').className   = 'score-big pass';
+    showState('result');
+  }
+
+  function retryTraining() {
+    answers = {}; currentIdx = 0;
+    renderTraining(); showState('training');
+  }
+
+  // ── HELPERS ──
+  function updateProgress() {
+    const total = quiz.length;
+    const done  = Object.keys(answers).length;
+    const pct   = total ? Math.round((done/total)*100) : 0;
+    document.getElementById('progress-fill').style.width = pct + '%';
+    document.getElementById('progress-text').textContent = done + ' of ' + total + ' complete';
+  }
+
+  function showState(name) {
+    document.querySelectorAll('.state').forEach(s => s.classList.remove('active'));
+    const el = document.getElementById('state-' + name);
+    if (el) el.classList.add('active');
+  }
+
+  function showError(msg) {
+    document.getElementById('error-msg').textContent = msg;
+    console.error('CIQ Error:', msg);
+    showState('error');
+  }
+
+  function extractYouTubeId(url) {
+    const m = url.match(/(?:v=|youtu\.be\/|embed\/)([a-zA-Z0-9_-]{11})/);
+    return m ? m[1] : null;
+  }
+</script>
+</body>
+</html>
