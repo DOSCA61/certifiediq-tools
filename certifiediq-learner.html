@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CertifiedIQ — Your Training</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:      #0d0f14;
+    --surface: #141720;
+    --border:  #1f2330;
+    --accent:  #3b82f6;
+    --accent2: #06b6d4;
+    --success: #10b981;
+    --danger:  #ef4444;
+    --text:    #e2e8f0;
+    --muted:   #64748b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; }
+
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 20px; height: 48px;
+    background: #080a0e; border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 50;
+  }
+  .logo {
+    font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 800;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .learner-pill {
+    font-size: 12px; color: var(--muted);
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 20px; padding: 4px 12px;
+  }
+
+  /* ── STATES ── */
+  .state { display: none !important; }
+  .state.active { display: block !important; }
+  #state-loading.active, #state-error.active, #state-result.active {
+    display: flex !important;
+    flex-direction: column; align-items: center;
+    justify-content: center; min-height: 70vh;
+    text-align: center; padding: 40px 24px; gap: 16px;
+  }
+
+  /* ── LOADING ── */
+  .spinner {
+    width: 40px; height: 40px;
+    border: 3px solid var(--border); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-sub { font-size: 13px; color: var(--muted); max-width: 280px; text-align: center; line-height: 1.6; }
+
+  /* ── ERROR ── */
+  #state-error .icon { font-size: 48px; }
+  #state-error h2 { font-family: 'Syne', sans-serif; font-size: 22px; }
+  #state-error p  { color: var(--muted); max-width: 400px; line-height: 1.6; font-size: 14px; }
+
+  /* ── VIDEO HERO ── */
+  #state-training { display: none !important; }
+  #state-training.active { display: block !important; }
+
+  .video-hero {
+    background: #000;
+    position: relative;
+  }
+
+  .video-wrap {
+    position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden;
+    max-height: 400px;
+  }
+  .video-wrap iframe, .video-wrap video {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;
+  }
+
+  .course-info {
+    padding: 16px 20px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  .course-title { font-family: 'Syne', sans-serif; font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+  .course-meta  { font-size: 12px; color: var(--muted); display: flex; gap: 12px; flex-wrap: wrap; }
+  .course-meta span { display: flex; align-items: center; gap: 4px; }
+
+  /* ── PROGRESS ── */
+  .progress-track { height: 3px; background: var(--border); }
+  .progress-fill  {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    transition: width 0.4s ease; width: 0%;
+  }
+
+  /* ── LESSONS ── */
+  .lessons-wrap { max-width: 680px; margin: 0 auto; padding: 20px 16px 60px; }
+
+  .lessons-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 16px;
+  }
+  .lessons-title { font-family: 'DM Mono', monospace; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+  .lessons-count { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); }
+
+  .lesson-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; overflow: hidden; margin-bottom: 12px;
+    transition: border-color 0.2s;
+  }
+  .lesson-card.current { border-color: var(--accent); }
+  .lesson-card.done    { border-color: rgba(16,185,129,0.4); }
+  .lesson-card.locked  { opacity: 0.45; pointer-events: none; }
+
+  .lesson-head {
+    display: flex; align-items: center; gap: 12px; padding: 14px 16px;
+  }
+  .lesson-num {
+    width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+    background: var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 600;
+    transition: all 0.2s;
+  }
+  .lesson-card.done    .lesson-num { background: var(--success); color: #fff; }
+  .lesson-card.current .lesson-num { background: var(--accent);  color: #fff; }
+
+  .lesson-info { flex: 1; }
+  .lesson-name { font-weight: 600; font-size: 14px; margin-bottom: 2px; }
+  .lesson-status { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; }
+
+  .lesson-body { padding: 0 16px 16px; }
+
+  /* ── TRANSLATION BOX ── */
+  .translation-box {
+    background: var(--bg); border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 8px; padding: 14px 16px;
+    margin-bottom: 16px; font-size: 14px; line-height: 1.75;
+    color: #cbd5e1;
+  }
+  .translation-label {
+    font-family: 'DM Mono', monospace; font-size: 9px;
+    text-transform: uppercase; letter-spacing: 0.12em;
+    color: var(--accent); margin-bottom: 8px;
+  }
+
+  /* ── QUIZ ── */
+  .quiz-box {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 16px;
+  }
+  .quiz-label {
+    font-family: 'DM Mono', monospace; font-size: 9px;
+    text-transform: uppercase; letter-spacing: 0.12em;
+    color: var(--warning, #f59e0b); margin-bottom: 10px;
+  }
+  .quiz-q { font-size: 14px; font-weight: 600; margin-bottom: 12px; line-height: 1.5; }
+  .quiz-opts { display: flex; flex-direction: column; gap: 8px; }
+
+  .quiz-opt {
+    display: flex; align-items: center; gap: 10px;
+    padding: 11px 14px; border: 1px solid var(--border);
+    border-radius: 8px; cursor: pointer; font-size: 13px;
+    transition: all 0.15s; background: var(--surface);
+  }
+  .quiz-opt:hover:not(.answered) { border-color: var(--accent); background: rgba(59,130,246,0.06); }
+  .quiz-opt.correct  { border-color: var(--success); background: rgba(16,185,129,0.08); color: var(--success); }
+  .quiz-opt.wrong    { border-color: var(--danger);  background: rgba(239,68,68,0.07);  color: var(--danger); }
+  .quiz-opt.revealed { border-color: rgba(16,185,129,0.4); opacity: 0.65; }
+
+  .opt-letter {
+    width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0;
+    background: var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-family: 'DM Mono', monospace; font-weight: 700;
+    transition: background 0.15s;
+  }
+  .quiz-opt.correct  .opt-letter { background: var(--success); color: #fff; }
+  .quiz-opt.wrong    .opt-letter { background: var(--danger);  color: #fff; }
+  .quiz-opt.revealed .opt-letter { background: var(--success); color: #fff; opacity: 0.65; }
+
+  .quiz-feedback {
+    display: none; margin-top: 12px; padding: 10px 14px;
+    border-radius: 8px; font-size: 13px; font-weight: 500;
+  }
+  .quiz-feedback.correct { background: rgba(16,185,129,0.1); color: var(--success); border: 1px solid rgba(16,185,129,0.3); }
+  .quiz-feedback.wrong   { background: rgba(239,68,68,0.07);  color: var(--danger);  border: 1px solid rgba(239,68,68,0.25); }
+
+  /* ── NEXT BTN ── */
+  .btn-next {
+    display: none; width: 100%; margin-top: 14px;
+    padding: 13px; background: var(--accent); color: #fff;
+    border: none; border-radius: 8px;
+    font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .btn-next:hover { opacity: 0.85; transform: translateY(-1px); }
+
+  /* ── RESULT ── */
+  .result-icon  { font-size: 64px; animation: pop 0.4s ease; }
+  @keyframes pop { 0%{ transform:scale(0.4);opacity:0; } 70%{ transform:scale(1.1); } 100%{ transform:scale(1);opacity:1; } }
+  .result-title { font-family: 'Syne', sans-serif; font-size: 30px; font-weight: 800; letter-spacing: -1px; }
+  .result-sub   { font-size: 15px; color: var(--muted); }
+  .score-big    { font-family: 'Syne', sans-serif; font-size: 60px; font-weight: 800; letter-spacing: -3px; }
+  .score-big.pass { color: var(--success); }
+  .score-big.fail { color: var(--danger); }
+
+  .cert-card {
+    background: var(--surface); border: 1px solid rgba(16,185,129,0.4);
+    border-radius: 16px; padding: 24px 32px; max-width: 380px; width: 100%;
+  }
+  .cert-card-label {
+    font-family: 'DM Mono', monospace; font-size: 10px;
+    text-transform: uppercase; letter-spacing: 0.12em;
+    color: var(--success); margin-bottom: 10px;
+  }
+  .cert-number {
+    font-family: 'DM Mono', monospace; font-size: 20px; font-weight: 500;
+    letter-spacing: 0.06em; margin-bottom: 12px;
+  }
+  .cert-detail { font-size: 13px; color: var(--muted); line-height: 1.8; }
+
+  .retry-btn {
+    padding: 11px 24px; background: transparent;
+    border: 1px solid var(--border); border-radius: 8px;
+    color: var(--muted); font-size: 14px; cursor: pointer; transition: all 0.2s;
+  }
+  .retry-btn:hover { border-color: var(--accent); color: var(--text); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">CertifiedIQ</div>
+  <div class="learner-pill" id="learner-pill">Loading…</div>
+</header>
+
+<!-- LOADING -->
+<div id="state-loading" class="state active">
+  <div class="spinner"></div>
+  <div class="loading-sub">Loading your training…<br>This may take up to 15 seconds on first load.</div>
+</div>
+
+<!-- ERROR -->
+<div id="state-error" class="state">
+  <div class="icon">⚠️</div>
+  <h2>Something went wrong</h2>
+  <p id="error-msg">This training link is invalid or has expired.</p>
+</div>
+
+<!-- TRAINING -->
+<div id="state-training" class="state">
+
+  <!-- Video Hero -->
+  <div class="video-hero">
+    <div class="video-wrap" id="video-wrap">
+      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#444;font-size:13px">No video</div>
+    </div>
+  </div>
+
+  <!-- Progress bar -->
+  <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+
+  <!-- Course info -->
+  <div class="course-info">
+    <div class="course-title" id="course-title">—</div>
+    <div class="course-meta">
+      <span>📋 <span id="meta-lessons">—</span> lessons</span>
+      <span>🎯 Pass mark: <span id="meta-pass">—</span>%</span>
+      <span id="meta-lang-wrap" style="display:none">🌐 <span id="meta-lang">—</span></span>
+    </div>
+  </div>
+
+  <!-- Lessons -->
+  <div class="lessons-wrap">
+    <div class="lessons-header">
+      <div class="lessons-title">Lessons</div>
+      <div class="lessons-count" id="lessons-count">0 of 0 complete</div>
+    </div>
+    <div id="lessons-container"></div>
+  </div>
+
+</div>
+
+<!-- RESULT -->
+<div id="state-result" class="state">
+  <div class="result-icon"  id="result-icon">🏆</div>
+  <div class="result-title" id="result-title">Well done!</div>
+  <div class="result-sub"   id="result-sub">You passed</div>
+  <div class="score-big"    id="result-score">—</div>
+  <div class="cert-card"    id="cert-card" style="display:none">
+    <div class="cert-card-label">🏆 Certificate Issued</div>
+    <div class="cert-number" id="cert-number">—</div>
+    <div class="cert-detail" id="cert-detail">—</div>
+  </div>
+  <button class="retry-btn" id="retry-btn" style="display:none" onclick="retryTraining()">↩ Try Again</button>
+</div>
+
+<script>
+  let API_URL    = '';
+  let enrolment  = null;
+  let learner    = null;
+  let course     = null;
+  let quiz       = [];
+  let answers    = {};
+  let currentIdx = 0;
+
+  // ── CORS-safe GAS fetch with retry ──
+  async function gasGet(params, retries = 3) {
+    const url = API_URL + '?' + new URLSearchParams(params);
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        const res  = await fetch(url, { redirect: 'follow' });
+        const text = await res.text();
+        if (text.trim().startsWith('<')) throw new Error('API returned HTML — check deployment');
+        return JSON.parse(text);
+      } catch(e) {
+        if (attempt === retries) throw e;
+        await new Promise(r => setTimeout(r, attempt * 2000));
+      }
+    }
+  }
+
+  // ── INIT ──
+  window.onload = async () => {
+    const p     = new URLSearchParams(window.location.search);
+    const token = p.get('token');
+    const api   = p.get('api') || localStorage.getItem('ciq_api_url') || '';
+
+    if (!token) return showError('No training token found in this link.');
+    if (!api)   return showError('API URL missing. Please contact your manager.');
+    API_URL = api;
+
+    try {
+      const data = await gasGet({ action: 'getLearnerByToken', token });
+      if (!data.success) return showError(data.error || 'Invalid or expired token.');
+
+      enrolment = data.enrolment;
+      learner   = data.learner;
+      course    = data.course;
+
+      document.getElementById('learner-pill').textContent = learner.FirstName + ' ' + learner.LastName;
+
+      const qData = await gasGet({ action: 'getQuiz', courseID: course.CourseID });
+      quiz = (qData.success && Array.isArray(qData.quiz)) ? qData.quiz : [];
+
+      if (enrolment.Status === 'passed') { showAlreadyPassed(); return; }
+
+      renderTraining();
+      showState('training');
+    } catch(e) {
+      showError('Could not load training: ' + e.message);
+    }
+  };
+
+  // ── RENDER ──
+  function renderTraining() {
+    // Course info
+    document.getElementById('course-title').textContent = course.Title;
+    document.getElementById('meta-lessons').textContent = quiz.length || '—';
+    document.getElementById('meta-pass').textContent    = course.PassMark || 80;
+
+    // Video with subtitle track if timing available
+    const videoUrl  = course.VideoURL || '';
+    const hasTiming = quiz.some(s => s.start_time !== null && s.start_time !== undefined);
+
+    if (videoUrl) {
+      const ytId = extractYouTubeId(videoUrl);
+      const wrap = document.getElementById('video-wrap');
+
+      if (ytId) {
+        wrap.innerHTML = `<iframe src="https://www.youtube.com/embed/${ytId}?rel=0" allowfullscreen></iframe>`;
+      } else {
+        // Uploaded video — generate VTT subtitles if timing available
+        if (hasTiming) {
+          const vtt     = buildVTT(quiz);
+          const vttBlob = new Blob([vtt], { type: 'text/vtt' });
+          const vttUrl  = URL.createObjectURL(vttBlob);
+          wrap.innerHTML = `
+            <video id="trainingVideo" controls>
+              <source src="${videoUrl}">
+              <track kind="subtitles" src="${vttUrl}" srclang="${learner.Language || 'en'}" label="Translation" default>
+            </video>`;
+        } else {
+          wrap.innerHTML = `<video id="trainingVideo" controls><source src="${videoUrl}"></video>`;
+        }
+      }
+    } else {
+      document.querySelector('.video-hero').style.display = 'none';
+    }
+
+    updateProgress();
+    renderLessons();
+  }
+
+  // ── BUILD VTT ──
+  function buildVTT(sections) {
+    let vtt = 'WEBVTT\n\n';
+    sections.forEach((s, i) => {
+      if (s.start_time === null || s.start_time === undefined) return;
+      const start = fmtVTT(s.start_time);
+      const end   = fmtVTT(s.end_time || s.start_time + 5);
+      const text  = s.translation || s.title || '';
+      vtt += `${i + 1}\n${start} --> ${end}\n${text}\n\n`;
+    });
+    return vtt;
+  }
+
+  function fmtVTT(seconds) {
+    if (!seconds) seconds = 0;
+    const h  = Math.floor(seconds / 3600);
+    const m  = Math.floor((seconds % 3600) / 60);
+    const s  = Math.floor(seconds % 60);
+    const ms = Math.round((seconds % 1) * 1000);
+    return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}.${String(ms).padStart(3,'0')}`;
+  }
+
+  // ── RENDER LESSONS ──
+  function renderLessons() {
+    const container = document.getElementById('lessons-container');
+
+    if (!quiz.length) {
+      container.innerHTML = `<div style="text-align:center;padding:40px;color:var(--muted)">
+        <div style="font-size:32px;margin-bottom:12px">📋</div>
+        <p style="margin-bottom:16px">No quiz questions for this course.</p>
+        <button onclick="completeWithNoQuiz()" style="padding:12px 24px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">Mark Complete</button>
+      </div>`;
+      return;
+    }
+
+    const letters = ['A','B','C','D'];
+    container.innerHTML = quiz.map((s, i) => {
+      const done    = answers[i] !== undefined;
+      const current = i === currentIdx;
+      const locked  = i > currentIdx;
+
+      return `<div class="lesson-card ${done ? 'done' : current ? 'current' : 'locked'}" id="lesson-${i}">
+        <div class="lesson-head">
+          <div class="lesson-num">${done ? '✓' : i + 1}</div>
+          <div class="lesson-info">
+            <div class="lesson-name">${s.title || 'Lesson ' + (i + 1)}</div>
+            <div class="lesson-status">${done ? 'Complete' : current ? 'In progress' : 'Locked'}</div>
+          </div>
+        </div>
+        ${current || done ? `<div class="lesson-body">
+          ${s.translation ? `
+            <div class="translation-box">
+              <div class="translation-label">📖 Lesson Content</div>
+              ${s.translation}
+            </div>` : ''}
+          ${s.question ? `
+            <div class="quiz-box">
+              <div class="quiz-label">📋 Comprehension Check</div>
+              <div class="quiz-q">${s.question}</div>
+              <div class="quiz-opts" id="opts-${i}">
+                ${(s.options || []).map((opt, j) => `
+                  <div class="quiz-opt${done ? ' answered' : ''}" id="opt-${i}-${j}"
+                    onclick="selectAnswer(${i}, ${j}, ${s.correctIndex ?? 0})">
+                    <div class="opt-letter">${letters[j] || j}</div>
+                    <div>${opt}</div>
+                  </div>`).join('')}
+              </div>
+              <div class="quiz-feedback" id="feedback-${i}"></div>
+            </div>` : ''}
+          <button class="btn-next" id="next-${i}"
+            style="${done ? 'display:none' : ''}"
+            onclick="nextLesson(${i})">
+            ${i < quiz.length - 1 ? 'Next Lesson →' : 'Submit & Finish 🏆'}
+          </button>
+        </div>` : ''}
+      </div>`;
+    }).join('');
+
+    // Re-apply answered state for done lessons
+    quiz.forEach((s, i) => {
+      if (answers[i] !== undefined) applyAnswerStyles(i, answers[i], s.correctIndex ?? 0);
+    });
+  }
+
+  // ── INTERACTION ──
+  function selectAnswer(sIdx, chosen, correct) {
+    if (answers[sIdx] !== undefined) return;
+    answers[sIdx] = chosen;
+    applyAnswerStyles(sIdx, chosen, correct);
+    document.getElementById(`next-${sIdx}`).style.display = 'block';
+    updateProgress();
+  }
+
+  function applyAnswerStyles(sIdx, chosen, correct) {
+    const isCorrect = chosen === correct;
+    document.querySelectorAll(`#opts-${sIdx} .quiz-opt`).forEach((el, j) => {
+      el.classList.add('answered');
+      if (j === correct && isCorrect && j === chosen) el.classList.add('correct');
+      else if (j === correct) el.classList.add('revealed');
+      if (j === chosen && !isCorrect) el.classList.add('wrong');
+    });
+    const fb = document.getElementById(`feedback-${sIdx}`);
+    if (fb) {
+      fb.style.display = 'block';
+      fb.className = 'quiz-feedback ' + (isCorrect ? 'correct' : 'wrong');
+      fb.textContent = isCorrect ? '✓ Correct!' : '✗ Incorrect. Answer: ' + (quiz[sIdx].options[correct] || '');
+    }
+  }
+
+  function nextLesson(i) {
+    if (i < quiz.length - 1) {
+      currentIdx = i + 1;
+      renderLessons();
+      setTimeout(() => {
+        document.getElementById(`lesson-${currentIdx}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    } else {
+      submitResults();
+    }
+  }
+
+  async function completeWithNoQuiz() { await submitScore(100); }
+
+  async function submitResults() {
+    const correct = quiz.filter((s, i) => answers[i] === (s.correctIndex ?? 0)).length;
+    await submitScore(Math.round((correct / quiz.length) * 100));
+  }
+
+  async function submitScore(score) {
+    showState('loading');
+    try {
+      const data = await gasGet({
+        action:      'submitQuiz',
+        enrolmentID: enrolment.EnrolmentID,
+        learnerID:   learner.LearnerID,
+        courseID:    course.CourseID,
+        score
+      });
+      showResult(score, data);
+    } catch(e) {
+      showState('training');
+      alert('Error submitting: ' + e.message);
+    }
+  }
+
+  // ── RESULTS ──
+  function showResult(score, data) {
+    const passMark = parseInt(course.PassMark) || 80;
+    const passed   = score >= passMark;
+
+    document.getElementById('result-icon').textContent  = passed ? '🏆' : '📋';
+    document.getElementById('result-title').textContent = passed ? 'Well done!' : 'Keep trying';
+    document.getElementById('result-sub').textContent   = passed
+      ? `You passed with ${score}%`
+      : `You scored ${score}% — need ${passMark}% to pass`;
+    document.getElementById('result-score').textContent = score + '%';
+    document.getElementById('result-score').className   = 'score-big ' + (passed ? 'pass' : 'fail');
+
+    if (passed && data.certNumber) {
+      document.getElementById('cert-card').style.display = 'block';
+      document.getElementById('cert-number').textContent = data.certNumber;
+      document.getElementById('cert-detail').innerHTML   =
+        `${learner.FirstName} ${learner.LastName}<br>${course.Title}<br>Issued today · Valid 12 months`;
+    }
+    if (!passed) document.getElementById('retry-btn').style.display = 'block';
+    showState('result');
+  }
+
+  function showAlreadyPassed() {
+    document.getElementById('result-icon').textContent  = '🏆';
+    document.getElementById('result-title').textContent = 'Already completed!';
+    document.getElementById('result-sub').textContent   = learner.FirstName + ', you already passed this training.';
+    document.getElementById('result-score').textContent = '✓';
+    document.getElementById('result-score').className   = 'score-big pass';
+    showState('result');
+  }
+
+  function retryTraining() {
+    answers = {}; currentIdx = 0;
+    renderTraining(); showState('training');
+  }
+
+  // ── HELPERS ──
+  function updateProgress() {
+    const total = quiz.length;
+    const done  = Object.keys(answers).length;
+    const pct   = total ? Math.round((done / total) * 100) : 0;
+    document.getElementById('progress-fill').style.width = pct + '%';
+    document.getElementById('lessons-count').textContent = done + ' of ' + total + ' complete';
+  }
+
+  function showState(name) {
+    document.querySelectorAll('.state').forEach(s => s.classList.remove('active'));
+    const el = document.getElementById('state-' + name);
+    if (el) el.classList.add('active');
+  }
+
+  function showError(msg) {
+    document.getElementById('error-msg').textContent = msg;
+    showState('error');
+  }
+
+  function extractYouTubeId(url) {
+    const m = url.match(/(?:v=|youtu\.be\/|embed\/)([a-zA-Z0-9_-]{11})/);
+    return m ? m[1] : null;
+  }
+</script>
+</body>
+</html>
