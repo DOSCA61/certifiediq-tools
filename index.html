@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CertifiedIQ — Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:      #0d0f14;
+    --surface: #141720;
+    --border:  #1f2330;
+    --accent:  #3b82f6;
+    --accent2: #06b6d4;
+    --text:    #e2e8f0;
+    --muted:   #64748b;
+    --mono:    'DM Mono', monospace;
+    --sans:    'DM Sans', sans-serif;
+    --display: 'Syne', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── NAV ── */
+  .ciq-nav {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 28px;
+    height: 48px;
+    background: #080a0e;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .ciq-nav-brand {
+    font-family: var(--display);
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: -0.3px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-right: 16px;
+    white-space: nowrap;
+  }
+
+  .ciq-nav-link {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--muted);
+    text-decoration: none;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+
+  .ciq-nav-link:hover { color: var(--text); background: var(--surface); }
+  .ciq-nav-link.active { color: var(--text); background: var(--surface); }
+
+  /* ── HERO ── */
+  .hero {
+    padding: 80px 40px 40px;
+    text-align: center;
+    position: relative;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 50%; transform: translateX(-50%);
+    width: 600px; height: 300px;
+    background: radial-gradient(ellipse at 50% 0%, rgba(59,130,246,0.12), transparent 70%);
+    pointer-events: none;
+  }
+
+  .hero-eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--accent);
+    margin-bottom: 16px;
+  }
+
+  .hero h1 {
+    font-family: var(--display);
+    font-size: clamp(36px, 5vw, 60px);
+    font-weight: 800;
+    letter-spacing: -2px;
+    line-height: 1.05;
+    margin-bottom: 16px;
+  }
+
+  .hero h1 span {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .hero p {
+    color: var(--muted);
+    font-size: 16px;
+    max-width: 480px;
+    margin: 0 auto 48px;
+    line-height: 1.6;
+  }
+
+  /* ── CARDS ── */
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0 40px 80px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    text-decoration: none;
+    color: var(--text);
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+    display: block;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--card-color, linear-gradient(90deg, var(--accent), var(--accent2)));
+    opacity: 0.7;
+    transition: opacity 0.2s;
+  }
+
+  .card:hover {
+    transform: translateY(-3px);
+    border-color: #2d3548;
+    box-shadow: 0 16px 40px rgba(0,0,0,0.4);
+  }
+
+  .card:hover::before { opacity: 1; }
+
+  .card-icon {
+    font-size: 32px;
+    margin-bottom: 16px;
+    display: block;
+  }
+
+  .card-title {
+    font-family: var(--display);
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    letter-spacing: -0.3px;
+  }
+
+  .card-desc {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.6;
+    margin-bottom: 20px;
+  }
+
+  .card-features {
+    list-style: none;
+    margin-bottom: 24px;
+  }
+
+  .card-features li {
+    font-size: 12px;
+    color: var(--muted);
+    padding: 3px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .card-features li::before {
+    content: '→';
+    color: var(--accent);
+    font-size: 11px;
+    flex-shrink: 0;
+  }
+
+  .card-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: var(--mono);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    transition: gap 0.2s;
+  }
+
+  .card:hover .card-cta { gap: 10px; }
+
+  /* colour overrides per card */
+  .card-lms     { --card-color: linear-gradient(90deg, #3b82f6, #06b6d4); }
+  .card-trans   { --card-color: linear-gradient(90deg, #f59e0b, #ef4444); }
+  .card-terms   { --card-color: linear-gradient(90deg, #8b5cf6, #ec4899); }
+
+  .card-lms   .card-cta { color: #3b82f6; }
+  .card-trans .card-cta { color: #f59e0b; }
+  .card-terms .card-cta { color: #8b5cf6; }
+
+  /* ── FOOTER ── */
+  footer {
+    margin-top: auto;
+    text-align: center;
+    padding: 24px;
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="ciq-nav">
+  <span class="ciq-nav-brand">CertifiedIQ</span>
+  <a class="ciq-nav-link active" href="index.html">🏠 Dashboard</a>
+  <a class="ciq-nav-link" href="certifiediq-admin.html">🎓 LMS Admin</a>
+  <a class="ciq-nav-link" href="translation-validator-vr2_2.html">🔤 Translator</a>
+  <a class="ciq-nav-link" href="certifiediq-term-admin.html">📚 Term Database</a>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-eyebrow">Workplace Safety Training</div>
+  <h1>The <span>CertifiedIQ</span><br>Platform</h1>
+  <p>Create, translate, and deliver safety training to your workforce in their own language.</p>
+</div>
+
+<!-- CARDS -->
+<div class="cards">
+
+  <a class="card card-lms" href="certifiediq-admin.html">
+    <span class="card-icon">🎓</span>
+    <div class="card-title">LMS Admin</div>
+    <div class="card-desc">Manage learners, courses, enrolments and certificates across your organisation.</div>
+    <ul class="card-features">
+      <li>Add and manage learners</li>
+      <li>Assign courses and track progress</li>
+      <li>View and verify certificates</li>
+      <li>Multi-language learner support</li>
+    </ul>
+    <div class="card-cta">Open Admin →</div>
+  </a>
+
+  <a class="card card-trans" href="translation-validator-vr2_2.html">
+    <span class="card-icon">🔤</span>
+    <div class="card-title">Translation Validator</div>
+    <div class="card-desc">Translate and validate safety training content across 9 languages with AI-powered accuracy checks.</div>
+    <ul class="card-features">
+      <li>Text, PDF and video modes</li>
+      <li>AI translation with back-validation</li>
+      <li>Push courses directly to LMS</li>
+      <li>HIQA compliance checking</li>
+    </ul>
+    <div class="card-cta">Open Translator →</div>
+  </a>
+
+  <a class="card card-terms" href="certifiediq-term-admin.html">
+    <span class="card-icon">📚</span>
+    <div class="card-title">Term Database</div>
+    <div class="card-desc">Manage your regulatory glossary — locked terminology that ensures consistency across all translations.</div>
+    <ul class="card-features">
+      <li>Sector-specific glossaries</li>
+      <li>Locked term translations</li>
+      <li>Dialect override support</li>
+      <li>Export for use in translations</li>
+    </ul>
+    <div class="card-cta">Open Terms →</div>
+  </a>
+
+</div>
+
+<footer>CertifiedIQ Platform · dosca61.github.io/certifiediq-tools</footer>
+
+</body>
+</html>
