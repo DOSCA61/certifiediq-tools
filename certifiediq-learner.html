@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CertifiedIQ — Your Training</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:      #0d0f14;
+    --surface: #141720;
+    --border:  #1f2330;
+    --accent:  #3b82f6;
+    --accent2: #06b6d4;
+    --success: #10b981;
+    --danger:  #ef4444;
+    --warning: #f59e0b;
+    --text:    #e2e8f0;
+    --muted:   #64748b;
+    --mono:    'DM Mono', monospace;
+    --sans:    'DM Sans', sans-serif;
+    --display: 'Syne', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  header {
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    height: 52px;
+    background: #080a0e;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .logo {
+    font-family: var(--display);
+    font-size: 16px;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  /* ── STATES ── */
+  .state { display: none; }
+  .state.active { display: block; }
+
+  /* ── LOADING ── */
+  #state-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    gap: 16px;
+  }
+
+  .spinner {
+    width: 36px; height: 36px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── ERROR ── */
+  #state-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    text-align: center;
+    padding: 40px;
+    gap: 12px;
+  }
+
+  #state-error .icon { font-size: 48px; }
+  #state-error h2 { font-family: var(--display); font-size: 22px; }
+  #state-error p  { color: var(--muted); max-width: 360px; line-height: 1.6; }
+
+  /* ── MAIN CONTENT ── */
+  #state-training {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 28px 20px 60px;
+  }
+
+  /* ── WELCOME STRIP ── */
+  .welcome {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .welcome-avatar {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+
+  .welcome-name {
+    font-family: var(--display);
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  .welcome-sub { font-size: 13px; color: var(--muted); margin-top: 2px; }
+
+  /* ── PROGRESS BAR ── */
+  .progress-wrap {
+    margin-bottom: 24px;
+  }
+
+  .progress-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    font-family: var(--mono);
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  .progress-track {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 2px;
+    transition: width 0.4s ease;
+    width: 0%;
+  }
+
+  /* ── SECTION CARD ── */
+  .section-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 16px;
+    transition: border-color 0.2s;
+  }
+
+  .section-card.current { border-color: var(--accent); }
+  .section-card.done    { border-color: rgba(16,185,129,0.4); }
+  .section-card.locked  { opacity: 0.5; }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 20px;
+    cursor: pointer;
+  }
+
+  .section-num {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 500;
+    flex-shrink: 0;
+    transition: all 0.2s;
+  }
+
+  .section-card.done  .section-num { background: var(--success); color: #fff; }
+  .section-card.current .section-num { background: var(--accent); color: #fff; }
+
+  .section-title-text {
+    font-weight: 600;
+    font-size: 15px;
+    flex: 1;
+  }
+
+  .section-status {
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--muted);
+  }
+
+  .section-body { display: none; padding: 0 20px 20px; }
+  .section-card.current .section-body { display: block; }
+
+  /* ── LESSON TEXT ── */
+  .lesson-text {
+    font-size: 14px;
+    line-height: 1.7;
+    color: #cbd5e1;
+    background: var(--bg);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+    border: 1px solid var(--border);
+  }
+
+  /* ── VIDEO ── */
+  .video-wrap {
+    position: relative;
+    padding-bottom: 56.25%;
+    height: 0;
+    overflow: hidden;
+    border-radius: 8px;
+    background: #000;
+    margin-bottom: 16px;
+  }
+
+  .video-wrap iframe,
+  .video-wrap video {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    border: none;
+  }
+
+  /* ── QUIZ ── */
+  .quiz-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+    margin-bottom: 10px;
+  }
+
+  .quiz-question {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 14px;
+    line-height: 1.5;
+  }
+
+  .quiz-options { display: flex; flex-direction: column; gap: 8px; }
+
+  .quiz-option {
+    padding: 12px 16px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .quiz-option:hover:not(.answered) { border-color: var(--accent); background: rgba(59,130,246,0.05); }
+  .quiz-option.correct  { border-color: var(--success); background: rgba(16,185,129,0.08); color: var(--success); }
+  .quiz-option.wrong    { border-color: var(--danger);  background: rgba(239,68,68,0.08);  color: var(--danger); }
+  .quiz-option.revealed { border-color: var(--success); background: rgba(16,185,129,0.05); opacity: 0.7; }
+
+  .option-letter {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-family: var(--mono);
+    font-weight: 600;
+    flex-shrink: 0;
+    transition: background 0.15s;
+  }
+
+  .quiz-option.correct .option-letter  { background: var(--success); color: #fff; }
+  .quiz-option.wrong   .option-letter  { background: var(--danger);  color: #fff; }
+  .quiz-option.revealed .option-letter { background: var(--success); color: #fff; }
+
+  .quiz-feedback {
+    margin-top: 12px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    display: none;
+  }
+
+  .quiz-feedback.correct { background: rgba(16,185,129,0.1); color: var(--success); border: 1px solid rgba(16,185,129,0.3); }
+  .quiz-feedback.wrong   { background: rgba(239,68,68,0.08);  color: var(--danger);  border: 1px solid rgba(239,68,68,0.25); }
+
+  /* ── NEXT BUTTON ── */
+  .btn-next {
+    display: none;
+    width: 100%;
+    margin-top: 16px;
+    padding: 13px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-next:hover { opacity: 0.88; transform: translateY(-1px); }
+
+  /* ── RESULT ── */
+  #state-result {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 70vh;
+    text-align: center;
+    padding: 40px 24px;
+  }
+
+  .result-icon { font-size: 64px; margin-bottom: 20px; animation: pop 0.4s ease; }
+
+  @keyframes pop {
+    0%   { transform: scale(0.5); opacity: 0; }
+    70%  { transform: scale(1.1); }
+    100% { transform: scale(1);   opacity: 1; }
+  }
+
+  .result-title {
+    font-family: var(--display);
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    margin-bottom: 8px;
+  }
+
+  .result-sub { font-size: 16px; color: var(--muted); margin-bottom: 32px; }
+
+  .cert-card {
+    background: var(--surface);
+    border: 1px solid rgba(16,185,129,0.4);
+    border-radius: 16px;
+    padding: 28px 36px;
+    max-width: 400px;
+    width: 100%;
+    margin-bottom: 24px;
+  }
+
+  .cert-card-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--success);
+    margin-bottom: 12px;
+  }
+
+  .cert-number {
+    font-family: var(--mono);
+    font-size: 22px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    color: var(--text);
+    margin-bottom: 16px;
+  }
+
+  .cert-detail {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.8;
+  }
+
+  .retry-btn {
+    padding: 12px 28px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--muted);
+    font-family: var(--sans);
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 16px;
+  }
+
+  .retry-btn:hover { border-color: var(--accent); color: var(--text); }
+
+  /* ── SCORE ── */
+  .score-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+
+  .score-val {
+    font-family: var(--display);
+    font-size: 48px;
+    font-weight: 800;
+    letter-spacing: -2px;
+  }
+
+  .score-val.pass { color: var(--success); }
+  .score-val.fail { color: var(--danger); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">CertifiedIQ</div>
+</header>
+
+<!-- LOADING -->
+<div id="state-loading" class="state active">
+  <div class="spinner"></div>
+  <div style="color:var(--muted);font-size:14px">Loading your training…</div>
+</div>
+
+<!-- ERROR -->
+<div id="state-error" class="state">
+  <div class="icon">⚠️</div>
+  <h2>Link not valid</h2>
+  <p id="error-msg">This training link is invalid or has expired. Please contact your manager for a new link.</p>
+</div>
+
+<!-- TRAINING -->
+<div id="state-training" class="state">
+
+  <div class="welcome">
+    <div class="welcome-avatar">👤</div>
+    <div>
+      <div class="welcome-name" id="learner-name">—</div>
+      <div class="welcome-sub" id="course-name">—</div>
+    </div>
+  </div>
+
+  <div class="progress-wrap">
+    <div class="progress-label">
+      <span>Progress</span>
+      <span id="progress-text">0 of 0 complete</span>
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+  </div>
+
+  <!-- Video -->
+  <div id="video-container" style="margin-bottom:24px;display:none">
+    <div style="font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:8px">Training Video</div>
+    <div class="video-wrap" id="video-wrap"></div>
+  </div>
+
+  <!-- Sections -->
+  <div id="sections-container"></div>
+
+</div>
+
+<!-- RESULT -->
+<div id="state-result" class="state">
+  <div class="result-icon" id="result-icon">🏆</div>
+  <div class="result-title" id="result-title">Training Complete!</div>
+  <div class="result-sub" id="result-sub">You passed</div>
+
+  <div class="score-row">
+    <div class="score-val" id="result-score">—</div>
+    <div style="color:var(--muted);font-size:14px">/ 100</div>
+  </div>
+
+  <div class="cert-card" id="cert-card" style="display:none">
+    <div class="cert-card-label">🏆 Certificate Issued</div>
+    <div class="cert-number" id="cert-number">—</div>
+    <div class="cert-detail" id="cert-detail">—</div>
+  </div>
+
+  <button class="retry-btn" id="retry-btn" style="display:none" onclick="retryTraining()">↩ Try Again</button>
+</div>
+
+<script>
+// ── STATE ──
+let API_URL    = '';
+let enrolment  = null;
+let learner    = null;
+let course     = null;
+let quiz       = [];
+let answers    = {};
+let currentIdx = 0;
+
+// ── API CALL ──
+async function gasGet(url) {
+  const res = await fetch(url, {
+    redirect: 'follow',
+    headers: { 'Content-Type': 'application/json' }
+  });
+  const text = await res.text();
+  try { return JSON.parse(text); }
+  catch(e) { throw new Error('Bad response from API: ' + text.substring(0, 100)); }
+}
+
+// ── INIT ──
+window.onload = async () => {
+  const params = new URLSearchParams(window.location.search);
+  const token  = params.get('token');
+  const api    = params.get('api') || localStorage.getItem('ciq_api_url') || '';
+
+  if (!token) return showError('No training token found in this link.');
+  if (!api)   return showError('API URL missing. Please contact your manager.');
+
+  API_URL = api;
+
+  try {
+    const data = await gasGet(`${API_URL}?action=getLearnerByToken&token=${token}`);
+
+    if (!data.success) return showError(data.error || 'Invalid token.');
+
+    enrolment = data.enrolment;
+    learner   = data.learner;
+    course    = data.course;
+
+    const qData = await gasGet(`${API_URL}?action=getQuiz&courseID=${course.CourseID}`);
+    quiz = (qData.success && Array.isArray(qData.quiz)) ? qData.quiz : [];
+
+    if (enrolment.Status === 'passed') {
+      showAlreadyPassed();
+      return;
+    }
+
+    renderTraining();
+    showState('training');
+  } catch(e) {
+    showError('Could not load training: ' + e.message);
+  }
+};
+
+// ── RENDER ──
+function renderTraining() {
+  document.getElementById('learner-name').textContent = `${learner.FirstName} ${learner.LastName}`;
+  document.getElementById('course-name').textContent  = course.Title;
+
+  // Video
+  const videoUrl = course.VideoURL || '';
+  if (videoUrl) {
+    const wrap = document.getElementById('video-wrap');
+    const ytId  = extractYouTubeId(videoUrl);
+    if (ytId) {
+      wrap.innerHTML = `<iframe src="https://www.youtube.com/embed/${ytId}" allowfullscreen></iframe>`;
+    } else {
+      wrap.innerHTML = `<video src="${videoUrl}" controls></video>`;
+    }
+    document.getElementById('video-container').style.display = 'block';
+  }
+
+  updateProgress();
+  renderSections();
+}
+
+function renderSections() {
+  const container = document.getElementById('sections-container');
+
+  if (!quiz.length) {
+    container.innerHTML = `<div style="text-align:center;padding:40px;color:var(--muted)">
+      <div style="font-size:32px;margin-bottom:12px">📋</div>
+      <p>No quiz questions available for this course.</p>
+      <button onclick="completeWithNoQuiz()" style="margin-top:16px;padding:12px 24px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">Mark as Complete</button>
+    </div>`;
+    return;
+  }
+
+  container.innerHTML = quiz.map((section, i) => {
+    const isDone    = answers[i] !== undefined;
+    const isCurrent = i === currentIdx;
+    const isLocked  = i > currentIdx;
+
+    return `<div class="section-card ${isDone ? 'done' : isCurrent ? 'current' : 'locked'}" id="section-${i}">
+      <div class="section-header" onclick="toggleSection(${i})">
+        <div class="section-num">${isDone ? '✓' : i + 1}</div>
+        <div class="section-title-text">${section.title || `Lesson ${i + 1}`}</div>
+        <div class="section-status">${isDone ? 'Complete' : isCurrent ? 'In progress' : 'Locked'}</div>
+      </div>
+      <div class="section-body" id="body-${i}">
+        ${section.translation ? `<div class="lesson-text">${section.translation}</div>` : ''}
+        ${renderQuiz(section, i)}
+        <button class="btn-next" id="next-${i}" onclick="nextSection(${i})">
+          ${i < quiz.length - 1 ? 'Next Lesson →' : 'Submit & Finish'}
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderQuiz(section, idx) {
+  if (!section.question) return '';
+  const letters = ['A','B','C','D'];
+  return `
+    <div class="quiz-label">📋 Quiz</div>
+    <div class="quiz-question">${section.question}</div>
+    <div class="quiz-options" id="opts-${idx}">
+      ${(section.options || []).map((opt, j) => `
+        <div class="quiz-option" id="opt-${idx}-${j}" onclick="selectAnswer(${idx}, ${j}, ${section.correctIndex ?? 0})">
+          <div class="option-letter">${letters[j] || j}</div>
+          <div>${opt}</div>
+        </div>`).join('')}
+    </div>
+    <div class="quiz-feedback" id="feedback-${idx}"></div>
+  `;
+}
+
+// ── INTERACTION ──
+function toggleSection(i) {
+  if (i > currentIdx) return; // locked
+}
+
+function selectAnswer(sectionIdx, chosenIdx, correctIdx) {
+  if (answers[sectionIdx] !== undefined) return; // already answered
+
+  answers[sectionIdx] = chosenIdx;
+  const correct   = chosenIdx === correctIdx;
+  const opts      = document.querySelectorAll(`#opts-${sectionIdx} .quiz-option`);
+  const feedback  = document.getElementById(`feedback-${sectionIdx}`);
+  const nextBtn   = document.getElementById(`next-${sectionIdx}`);
+
+  opts.forEach((opt, j) => {
+    opt.classList.add('answered');
+    if (j === correctIdx) opt.classList.add(correct && j === chosenIdx ? 'correct' : 'revealed');
+    if (j === chosenIdx && !correct) opt.classList.add('wrong');
+  });
+
+  feedback.style.display = 'block';
+  if (correct) {
+    feedback.className = 'quiz-feedback correct';
+    feedback.textContent = '✓ Correct!';
+  } else {
+    feedback.className = 'quiz-feedback wrong';
+    feedback.textContent = `✗ Incorrect. The correct answer was: ${quiz[sectionIdx].options[correctIdx]}`;
+  }
+
+  nextBtn.style.display = 'block';
+  updateProgress();
+}
+
+function nextSection(i) {
+  if (i < quiz.length - 1) {
+    currentIdx = i + 1;
+    renderSections();
+    // Scroll to next section
+    setTimeout(() => {
+      document.getElementById(`section-${currentIdx}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+  } else {
+    submitResults();
+  }
+}
+
+async function completeWithNoQuiz() {
+  await submitScore(100);
+}
+
+// ── SUBMIT ──
+async function submitResults() {
+  const total   = quiz.length;
+  const correct = quiz.filter((_, i) => answers[i] === (quiz[i].correctIndex ?? 0)).length;
+  const score   = Math.round((correct / total) * 100);
+  await submitScore(score);
+}
+
+async function submitScore(score) {
+  showState('loading');
+  try {
+    const data = await gasGet(`${API_URL}?action=submitQuiz&` + new URLSearchParams({
+      enrolmentID: enrolment.EnrolmentID,
+      learnerID:   learner.LearnerID,
+      courseID:    course.CourseID,
+      score:       score
+    }));
+    showResult(score, data);
+  } catch(e) {
+    showState('training');
+    alert('Error submitting results: ' + e.message);
+  }
+}
+
+// ── RESULTS ──
+function showResult(score, data) {
+  const passMark = parseInt(course.PassMark) || 80;
+  const passed   = score >= passMark;
+
+  document.getElementById('result-icon').textContent  = passed ? '🏆' : '📋';
+  document.getElementById('result-title').textContent = passed ? 'Well done!' : 'Keep trying';
+  document.getElementById('result-sub').textContent   = passed ? `You passed with ${score}%` : `You scored ${score}% — ${passMark}% needed to pass`;
+  document.getElementById('result-score').textContent = score;
+  document.getElementById('result-score').className   = `score-val ${passed ? 'pass' : 'fail'}`;
+
+  if (passed && data.certNumber) {
+    const certCard = document.getElementById('cert-card');
+    certCard.style.display = 'block';
+    document.getElementById('cert-number').textContent = data.certNumber;
+    document.getElementById('cert-detail').innerHTML   =
+      `${learner.FirstName} ${learner.LastName}<br>${course.Title}<br>Issued today · Valid for 12 months`;
+  }
+
+  if (!passed) {
+    document.getElementById('retry-btn').style.display = 'block';
+  }
+
+  showState('result');
+}
+
+function showAlreadyPassed() {
+  document.getElementById('result-icon').textContent  = '🏆';
+  document.getElementById('result-title').textContent = 'Already completed!';
+  document.getElementById('result-sub').textContent   = `${learner.FirstName}, you have already passed this training.`;
+  document.getElementById('result-score').textContent = '✓';
+  document.getElementById('result-score').className   = 'score-val pass';
+  showState('result');
+}
+
+function retryTraining() {
+  answers    = {};
+  currentIdx = 0;
+  renderTraining();
+  showState('training');
+}
+
+// ── PROGRESS ──
+function updateProgress() {
+  const total    = quiz.length;
+  const done     = Object.keys(answers).length;
+  const pct      = total ? Math.round((done / total) * 100) : 0;
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('progress-text').textContent = `${done} of ${total} complete`;
+}
+
+// ── HELPERS ──
+function showState(name) {
+  document.querySelectorAll('.state').forEach(s => s.classList.remove('active'));
+  const el = document.getElementById('state-' + name);
+  if (el) el.classList.add('active');
+}
+
+function showError(msg) {
+  document.getElementById('error-msg').textContent = msg;
+  showState('error');
+}
+
+function extractYouTubeId(url) {
+  const m = url.match(/(?:v=|youtu\.be\/|embed\/)([a-zA-Z0-9_-]{11})/);
+  return m ? m[1] : null;
+}
+</script>
+</body>
+</html>
