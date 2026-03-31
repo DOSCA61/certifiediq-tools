@@ -5939,9 +5939,91 @@ function loadUploadedVideo(file) {
   revealCoursePanel();
 }
 
+// ── Audio extraction + chunking helpers ──────────────────────
+// Encode a Float32Array (mono PCM) as a 16-bit WAV Blob
+function _pcmToWav(pcmFloat32, sampleRate) {
+  const numSamples = pcmFloat32.length;
+  const buffer = new ArrayBuffer(44 + numSamples * 2);
+  const view = new DataView(buffer);
+  const writeStr = (off, s) => { for (let i = 0; i < s.length; i++) view.setUint8(off + i, s.charCodeAt(i)); };
+  writeStr(0,  'RIFF');
+  view.setUint32(4,  36 + numSamples * 2, true);
+  writeStr(8,  'WAVE');
+  writeStr(12, 'fmt ');
+  view.setUint32(16, 16, true);          // PCM chunk size
+  view.setUint16(20, 1,  true);          // PCM format
+  view.setUint16(22, 1,  true);          // mono
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true); // byte rate
+  view.setUint16(32, 2,  true);          // block align
+  view.setUint16(34, 16, true);          // bits per sample
+  writeStr(36, 'data');
+  view.setUint32(40, numSamples * 2, true);
+  for (let i = 0; i < numSamples; i++) {
+    const s = Math.max(-1, Math.min(1, pcmFloat32[i]));
+    view.setInt16(44 + i * 2, s < 0 ? s * 32768 : s * 32767, true);
+  }
+  return new Blob([buffer], { type: 'audio/wav' });
+}
+
+// Extract audio from any video/audio File, downsample to 16 kHz mono WAV
+// Returns { blob, duration } where blob is a WAV Blob and duration is seconds
+async function _extractAudioWav(file) {
+  const arrayBuf = await file.arrayBuffer();
+  const audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+  const decoded  = await audioCtx.decodeAudioData(arrayBuf);
+  audioCtx.close();
+
+  // Mix down to mono
+  const mono = new Float32Array(decoded.length);
+  for (let ch = 0; ch < decoded.numberOfChannels; ch++) {
+    const chData = decoded.getChannelData(ch);
+    for (let i = 0; i < decoded.length; i++) mono[i] += chData[i];
+  }
+  for (let i = 0; i < mono.length; i++) mono[i] /= decoded.numberOfChannels;
+
+  return { pcm: mono, sampleRate: 16000, duration: decoded.duration };
+}
+
+// Split a Float32 PCM array into chunks whose WAV size is <= maxBytes
+// Returns array of Blobs
+function _chunkPcm(pcm, sampleRate, maxBytes) {
+  const WAV_HEADER = 44;
+  const maxSamples = Math.floor((maxBytes - WAV_HEADER) / 2); // 16-bit = 2 bytes/sample
+  const chunks = [];
+  for (let offset = 0; offset < pcm.length; offset += maxSamples) {
+    chunks.push(_pcmToWav(pcm.subarray(offset, offset + maxSamples), sampleRate));
+  }
+  return chunks;
+}
+
+// Send one WAV Blob to Worker /whisper, return { text, segments, timeOffset }
+async function _whisperChunk(wavBlob, chunkIndex, timeOffset, lang, proxyBase) {
+  const formData = new FormData();
+  formData.append('file', wavBlob, `chunk_${chunkIndex}.wav`);
+  formData.append('language', lang);
+  formData.append('response_format', 'verbose_json');
+  formData.append('timestamp_granularities[]', 'segment');
+
+  const resp = await fetch(`${proxyBase}/whisper`, { method: 'POST', body: formData });
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error(err.error?.message || `HTTP ${resp.status}`);
+  }
+  const data = await resp.json();
+  const text = (data.text || '').trim();
+  const segments = (data.segments || []).map(s => ({
+    start: s.start + timeOffset,
+    end:   s.end   + timeOffset,
+    text:  s.text.trim()
+  }));
+  return { text, segments };
+}
+
+// ── Main Whisper entry point ──────────────────────────────────
 async function transcribeWithWhisper(file) {
   const proxyBase = deeplProxyUrl().replace(/\/translate$/, '');
-  const status = document.getElementById('transcriptStatus');
+  const status    = document.getElementById('transcriptStatus');
 
   if (!proxyBase) {
     status.textContent = '⚠ No proxy URL set — paste transcript manually below';
@@ -5949,65 +6031,77 @@ async function transcribeWithWhisper(file) {
   }
 
   const fileMB = (file.size / 1024 / 1024).toFixed(1);
-  if (file.size > 25 * 1024 * 1024) {
-    status.textContent = `⚠ File is ${fileMB}MB — Whisper limit is 25MB. Paste transcript manually.`;
-    return;
-  }
-
-  status.textContent = `⏳ Transcribing with Whisper (${fileMB}MB) — requesting timed segments…`;
-  status.style.color = 'var(--text-muted)';
+  const CHUNK_MAX = 20 * 1024 * 1024; // 20 MB per chunk (safely under 25 MB Whisper limit)
+  const lang = document.getElementById('videoSrcLang').value || 'en';
 
   try {
-    const lang = document.getElementById('videoSrcLang').value || 'en';
-    const formData = new FormData();
-    formData.append('file', file, file.name);
-    formData.append('language', lang);
+    if (file.size <= CHUNK_MAX) {
+      // ── Small file — send directly ──────────────────────────
+      status.textContent = `⏳ Transcribing (${fileMB}MB)…`;
+      status.style.color = 'var(--text-muted)';
+      const sampleRate = 16000;
+      const { pcm, duration } = await _extractAudioWav(file);
+      const wavBlob = _pcmToWav(pcm, sampleRate);
+      const wavMB = (wavBlob.size / 1024 / 1024).toFixed(1);
+      status.textContent = `⏳ Sending audio (${wavMB}MB extracted) to Whisper…`;
+      const { text, segments } = await _whisperChunk(wavBlob, 0, 0, lang, proxyBase);
+      _applyWhisperResult(text, segments, duration, status);
 
-    // Route through Cloudflare Worker — key stored server-side
-    const resp = await fetch(`${proxyBase}/whisper`, {
-      method: 'POST',
-      body: formData   // no Content-Type header — browser sets multipart boundary automatically
-    });
-
-    if (!resp.ok) {
-      const err = await resp.json().catch(() => ({}));
-      throw new Error(err.error?.message || 'HTTP ' + resp.status);
-    }
-
-    const data = await resp.json();
-
-    // verbose_json returns { text, segments: [{id, start, end, text, ...}] }
-    if (data.segments && data.segments.length > 0) {
-      videoSegments = data.segments.map(seg => ({
-        start: seg.start,
-        end:   seg.end,
-        text:  seg.text.trim()
-      }));
-      videoTranscript = data.text.trim();
-      const dur = videoSegments[videoSegments.length - 1].end;
-      status.textContent = `✓ Whisper: ${videoSegments.length} segments · ${dur.toFixed(1)}s · ${videoTranscript.length} chars`;
-      status.style.color = 'var(--green)';
-    } else if (data.text) {
-      // Fallback: no segments but got text — treat as single segment
-      videoTranscript = data.text.trim();
-      videoSegments = [{ start: 0, end: videoDuration || 0, text: videoTranscript }];
-      status.textContent = `✓ Whisper text only (no segment timing) — ${videoTranscript.length} chars`;
-      status.style.color = 'var(--amber)';
     } else {
-      status.textContent = '⚠ Whisper returned empty — paste transcript manually below';
-      return;
-    }
+      // ── Large file — extract audio, chunk, stitch ───────────
+      status.textContent = `⏳ ${fileMB}MB file — extracting audio track…`;
+      status.style.color = 'var(--text-muted)';
 
-    document.getElementById('transcriptText').textContent = videoTranscript;
-    document.getElementById('transcriptManual').value = videoTranscript;
-    document.getElementById('manualTranscriptStatus').textContent = '✓ Set from Whisper';
-    document.getElementById('manualTranscriptStatus').style.color = 'var(--green)';
-    showSendToPdfBtn(videoTranscript, videoTitle || 'Video Transcript');
+      const { pcm, sampleRate, duration } = await _extractAudioWav(file);
+      const chunks = _chunkPcm(pcm, sampleRate, CHUNK_MAX);
+      const samplesPerChunk = Math.floor((CHUNK_MAX - 44) / 2);
+      const secsPerChunk    = samplesPerChunk / sampleRate;
+
+      status.textContent = `⏳ Sending ${chunks.length} chunks to Whisper…`;
+
+      let allText = '';
+      let allSegments = [];
+      for (let i = 0; i < chunks.length; i++) {
+        const timeOffset = i * secsPerChunk;
+        const chunkMB = (chunks[i].size / 1024 / 1024).toFixed(1);
+        status.textContent = `⏳ Chunk ${i + 1}/${chunks.length} (${chunkMB}MB, ${timeOffset.toFixed(0)}s+)…`;
+        const { text, segments } = await _whisperChunk(chunks[i], i, timeOffset, lang, proxyBase);
+        if (allText && text) allText += ' ';
+        allText += text;
+        allSegments = allSegments.concat(segments);
+      }
+      _applyWhisperResult(allText, allSegments, duration, status);
+    }
 
   } catch(e) {
     status.textContent = '⚠ Whisper error: ' + e.message + ' — paste manually below';
     status.style.color = 'var(--amber)';
+    console.error('Whisper error:', e);
   }
+}
+
+// Apply completed Whisper result to all UI fields
+function _applyWhisperResult(text, segments, duration, status) {
+  if (segments && segments.length > 0) {
+    videoSegments  = segments;
+    videoTranscript = text;
+    const dur = segments[segments.length - 1].end;
+    status.textContent = `✓ Whisper: ${segments.length} segments · ${dur.toFixed(1)}s · ${text.length} chars`;
+    status.style.color = 'var(--green)';
+  } else if (text) {
+    videoTranscript = text;
+    videoSegments   = [{ start: 0, end: duration || 0, text }];
+    status.textContent = `✓ Whisper text (no segment timing) — ${text.length} chars`;
+    status.style.color = 'var(--amber)';
+  } else {
+    status.textContent = '⚠ Whisper returned empty — paste transcript manually below';
+    return;
+  }
+  document.getElementById('transcriptText').textContent      = videoTranscript;
+  document.getElementById('transcriptManual').value          = videoTranscript;
+  document.getElementById('manualTranscriptStatus').textContent   = '✓ Set from Whisper';
+  document.getElementById('manualTranscriptStatus').style.color   = 'var(--green)';
+  showSendToPdfBtn(videoTranscript, videoTitle || 'Video Transcript');
 }
 
 function onVideoTimeUpdate() {
