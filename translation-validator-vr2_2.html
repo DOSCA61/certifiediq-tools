@@ -3180,7 +3180,7 @@ async function callDeepL(key, text, targetLang, sourceLang = null) {
   throw new Error('DeepL proxy: no translation returned');
 }
 
-function claudeKey()    { return document.getElementById('claudeKey').value.trim(); }
+function claudeKey()    { const stored = document.getElementById('claudeKey').value.trim(); return stored || (deeplProxyUrl() ? 'via-proxy' : ''); }
 function deeplKey()     { return document.getElementById('deeplKey').value.trim(); }
 function deeplProxyUrl(){ return (document.getElementById('deeplProxyUrl')?.value || '').trim(); }
 function openaiKey()    { return deeplKey(); }   // legacy alias — OpenAI replaced by DeepL
