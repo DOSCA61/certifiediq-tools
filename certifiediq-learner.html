@@ -538,6 +538,12 @@
       </div>
     </div>
 
+    <!-- Subtitle note (shown when subtitles available for YouTube) -->
+    <div id="subNote" style="display:none;font-family:var(--mono);font-size:10px;
+         letter-spacing:0.06em;color:#059669;background:rgba(0,158,115,0.08);
+         border:1px solid rgba(0,158,115,0.3);padding:7px 12px;margin-bottom:10px;
+         border-radius:2px"></div>
+
     <!-- Watch progress -->
     <div class="watch-bar-wrap">
       <div class="watch-bar-label">
@@ -667,6 +673,7 @@ let state = {
   gpsCoords:     null,
   ytPlayer:      null,
   watchInterval: null,
+  currentVTT:    null,
   watchPct:      0,
   videoReady:    false,
 };
@@ -864,6 +871,8 @@ function startCurrentModule() {
   document.getElementById('vid-title').textContent = mod.title;
   document.getElementById('vid-sub').textContent   = `Module ${state.currentModIdx + 1} of ${state.modules.length}`;
   document.getElementById('completeBtn').disabled  = true;
+  const subNoteEl = document.getElementById('subNote');
+  if (subNoteEl) subNoteEl.style.display = 'none';
 
   // Show/hide watch bar depending on whether module has a video
   const watchBarWrap = document.querySelector('.watch-bar-wrap');
@@ -883,10 +892,28 @@ function startCurrentModule() {
   // GPS
   startGPS();
 
-  // Video
-  buildVideo(mod.video_url);
+  // Fetch subtitles for learner's language, then build video
+  loadSubtitlesThenBuild(mod);
 
   showScreen('screen-video');
+}
+
+async function loadSubtitlesThenBuild(mod) {
+  state.currentVTT = null;
+  try {
+    const sub = await apiGet({
+      action:    'lms.subtitles.get',
+      module_id: mod.id,
+      language:  state.learner.language || 'English'
+    });
+    if (sub && sub.vtt_content) {
+      state.currentVTT = sub.vtt_content;
+    }
+  } catch(e) {
+    // No subtitles available — continue without
+    console.log('No subtitles found for this module');
+  }
+  buildVideo(mod.video_url);
 }
 
 function buildVideo(videoUrl) {
@@ -922,21 +949,48 @@ function buildVideo(videoUrl) {
     wrap.innerHTML = `<div id="ytPlayer"></div>`;
     state.ytPlayer = new YT.Player('ytPlayer', {
       videoId: ytId,
-      playerVars: { rel: 0, modestbranding: 1, playsinline: 1 },
+      playerVars: { rel: 0, modestbranding: 1, playsinline: 1, cc_load_policy: 1 },
       events: {
-        onReady: () => { state.videoReady = true; },
+        onReady: () => {
+          state.videoReady = true;
+          // Show subtitle availability indicator
+          if (state.currentVTT) {
+            const subNote = document.getElementById('subNote');
+            if (subNote) {
+              subNote.style.display = 'block';
+              subNote.textContent = `📝 ${state.learner?.language || ''} subtitles available — use the CC button in the player`;
+            }
+          }
+        },
         onStateChange: onYtStateChange,
       }
     });
   } else {
     // Direct video URL
+    const trackEl = state.currentVTT
+      ? `<track kind="subtitles" label="${state.learner?.language || 'Subtitles'}" srclang="xx" default
+             src="${buildVTTObjectURL(state.currentVTT)}">`
+      : '';
     wrap.innerHTML = `<video id="directVideo" controls playsinline style="position:absolute;top:0;left:0;width:100%;height:100%;background:#000"
-        src="${videoUrl}"></video>`;
+        src="${videoUrl}">${trackEl}</video>`;
     const vid = document.getElementById('directVideo');
     vid.addEventListener('timeupdate', () => {
       if (vid.duration) updateWatchProgress((vid.currentTime / vid.duration) * 100);
     });
+    if (state.currentVTT) {
+      // Force captions on
+      setTimeout(() => {
+        const v = document.getElementById('directVideo');
+        if (v && v.textTracks && v.textTracks[0]) v.textTracks[0].mode = 'showing';
+      }, 500);
+    }
   }
+}
+
+// Build a blob URL from VTT text so it can be used as a <track> src
+function buildVTTObjectURL(vttText) {
+  const blob = new Blob([vttText], { type: 'text/vtt' });
+  return URL.createObjectURL(blob);
 }
 
 function onYtStateChange(event) {
@@ -1205,6 +1259,7 @@ function resetAll() {
   state.selectedOption = null;
   state.gpsCoords      = null;
   state.watchPct       = 0;
+  state.currentVTT      = null;
   document.getElementById('w-course').value = '';
   document.getElementById('courseInfo').style.display = 'none';
   document.getElementById('startBtn').disabled = true;
