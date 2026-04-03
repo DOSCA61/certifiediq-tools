@@ -980,10 +980,13 @@ function startContentModule(mod) {
   document.getElementById('ct-sub').textContent     = `Module ${idx + 1} of ${total}`;
   document.getElementById('ct-progress').textContent = `${idx + 1} / ${total}`;
 
-  // Show translated content, fall back to original
+  // Show translated content — fetch from Translations table, fall back to module fields
   const bodyEl = document.getElementById('ct-body');
-  const text   = mod.content_translated || mod.content_original || mod.title || '';
-  bodyEl.textContent = text;
+  bodyEl.textContent = '⏳ Loading content…';
+  // Fetch asynchronously then update
+  loadModuleTranslation(mod).then(text => {
+    bodyEl.textContent = text;
+  });
 
   // Reset confirm state
   const confirmWrap = document.getElementById('ct-confirm-wrap');
@@ -1018,6 +1021,27 @@ function startContentModule(mod) {
   }, 1000);
 
   showScreen('screen-content');
+}
+
+async function loadModuleTranslation(mod) {
+  try {
+    const row = await apiGet({
+      action:    'lms.translations.get',
+      module_id: mod.id,
+      language:  state.learner.language || 'English'
+    });
+    if (row && row.content) {
+      // Update module title if translated title available
+      if (row.title) {
+        document.getElementById('ct-title').textContent = row.title;
+      }
+      return row.content;
+    }
+  } catch(e) {
+    console.log('Translation fetch failed:', e.message);
+  }
+  // Fall back to module fields or title
+  return mod.content_translated || mod.content_original || mod.title || '';
 }
 
 function startGPSContent() {
