@@ -7138,13 +7138,14 @@ async function pushCourseToLMS() {
 
   // Build quiz data from videoSections — include per-section VTT segment if available
   const quizData = videoSections.map(s => ({
-    title:        s.title       || '',
-    translation:  s.translation || s.original || '',
-    question:     s.question    || '',
-    options:      s.options     || [],
-    correctIndex: s.correctIdx  ?? 0,
-    start_time:   s.start_time  ?? null,
-    end_time:     s.end_time    ?? null,
+    title:        s.title           || '',
+    original:     s.original        || '',
+    translation:  s.translation     || s.original || '',
+    question:     s.question        || '',
+    options:      s.options         || [],
+    correctIndex: s.correctIdx      ?? 0,
+    start_time:   s.start_time      ?? null,
+    end_time:     s.end_time        ?? null,
     vtt:          s.subtitleSegments && s.subtitleSegments.length
                     ? buildVTT([s])
                     : ''

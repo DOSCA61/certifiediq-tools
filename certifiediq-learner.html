@@ -573,6 +573,59 @@
 </div>
 
 <!-- ═══════════════════════════════════════════════
+     SCREEN 4b — LESSON CONTENT (no video / text only)
+═══════════════════════════════════════════════ -->
+<div id="screen-content" class="screen">
+  <div class="topbar">
+    <div class="topbar-logo"></div>
+    <div>
+      <div class="topbar-title" id="ct-title">Module</div>
+      <div class="topbar-sub" id="ct-sub">Read and confirm</div>
+    </div>
+    <div class="topbar-right" id="ct-progress">—</div>
+  </div>
+  <div class="content">
+
+    <!-- Lesson content box -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent);
+                padding:20px;margin-bottom:20px;font-size:15px;line-height:1.8;color:var(--text)" id="ct-body">
+    </div>
+
+    <!-- GPS -->
+    <div class="gps-status gps-waiting" id="ct-gpsStatus">
+      📍 Acquiring location…
+    </div>
+
+    <!-- Countdown + confirm -->
+    <div id="ct-countdown-wrap" style="background:var(--surface2);border:1px solid var(--border);
+              padding:14px 16px;margin-bottom:16px;display:flex;align-items:center;gap:12px">
+      <div id="ct-countdown" style="font-family:var(--mono);font-size:28px;font-weight:600;
+           color:var(--accent);min-width:36px;text-align:center">4</div>
+      <div style="font-size:13px;color:var(--text-muted);line-height:1.5">
+        Please read the content above carefully.<br>
+        <span id="ct-countdown-msg">You may confirm in <strong id="ct-countdown-sec">4</strong> seconds…</span>
+      </div>
+    </div>
+
+    <!-- Confirm checkbox -->
+    <div id="ct-confirm-wrap" style="background:rgba(0,158,115,0.06);border:1px solid rgba(0,158,115,0.3);
+              padding:14px 16px;margin-bottom:20px;display:flex;align-items:flex-start;gap:12px;display:none"
+         id="ct-confirm-wrap">
+      <input type="checkbox" id="ct-checkbox" onchange="onConfirmCheck()"
+             style="width:20px;height:20px;margin-top:2px;accent-color:var(--green);cursor:pointer;flex-shrink:0">
+      <label for="ct-checkbox" style="font-size:14px;font-weight:500;cursor:pointer;line-height:1.5">
+        I confirm I have read and understood the content above.
+      </label>
+    </div>
+
+    <button class="btn btn-green" id="ct-continueBtn" onclick="completeContentModule()" disabled>
+      <span class="spinner"></span>
+      ✓ CONTINUE →
+    </button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
      SCREEN 5 — ASSESSMENT
 ═══════════════════════════════════════════════ -->
 <div id="screen-quiz" class="screen">
@@ -674,6 +727,8 @@ let state = {
   ytPlayer:      null,
   watchInterval: null,
   currentVTT:    null,
+  courseVideoUrl: null,   // video URL of first module — used to detect repeated video
+  countdownTimer: null,
   watchPct:      0,
   videoReady:    false,
 };
@@ -801,6 +856,10 @@ async function enrol() {
     state.questions       = await apiGet({ action: 'lms.questions', course_id: state.selectedCourse.id });
     state.completedMods   = new Set();
     state.currentModIdx   = 0;
+    // Track the course-level video URL (first module's URL) to detect repeats
+    state.courseVideoUrl  = state.modules.length && state.modules[0].video_url
+                              ? state.modules[0].video_url.trim()
+                              : null;
 
     buildOverview();
     showScreen('screen-overview');
@@ -849,8 +908,13 @@ function buildOverview() {
     startBtn.classList.remove('loading');
     startBtn.disabled = false;
   } else {
-    const cur = state.modules[state.currentModIdx];
-    startBtn.innerHTML = `<span class="spinner"></span>▶ ${cur ? cur.title.toUpperCase() : 'START MODULE'} →`;
+    const cur          = state.modules[state.currentModIdx];
+    const curVideoUrl  = (cur?.video_url || '').trim();
+    const courseVideo  = (state.courseVideoUrl || '').trim();
+    const isFirst      = state.currentModIdx === 0;
+    const hasVideo     = curVideoUrl && (!curVideoUrl || curVideoUrl !== courseVideo || isFirst);
+    const icon         = hasVideo ? '▶' : '📖';
+    startBtn.innerHTML = `<span class="spinner"></span>${icon} ${cur ? cur.title.toUpperCase() : 'START MODULE'} →`;
     startBtn.onclick = startCurrentModule;
     startBtn.disabled = false;
   }
@@ -859,14 +923,32 @@ function buildOverview() {
 // ═══════════════════════════════════════════════════════════════
 // SCREEN 4 — VIDEO
 // ═══════════════════════════════════════════════════════════════
+const CONTENT_CONFIRM_DELAY = 4; // seconds before confirm checkbox appears
+
 function startCurrentModule() {
   const mod = state.modules[state.currentModIdx];
   if (!mod) return;
 
+  const modVideoUrl  = (mod.video_url || '').trim();
+  const courseVideo  = (state.courseVideoUrl || '').trim();
+  const isFirstMod   = state.currentModIdx === 0;
+  const isSameVideo  = modVideoUrl && modVideoUrl === courseVideo && !isFirstMod;
+  const hasUniqueVideo = modVideoUrl && !isSameVideo;
+
+  if (hasUniqueVideo) {
+    // This module has its own distinct video — show video screen
+    startVideoModule(mod);
+  } else {
+    // No video or repeated video — show content/confirm screen
+    startContentModule(mod);
+  }
+}
+
+function startVideoModule(mod) {
   state.watchPct    = 0;
   state.gpsCoords   = null;
   state.videoReady  = false;
-  state.hasVideo    = !!(mod.video_url && mod.video_url.trim());
+  state.hasVideo    = true;
 
   document.getElementById('vid-title').textContent = mod.title;
   document.getElementById('vid-sub').textContent   = `Module ${state.currentModIdx + 1} of ${state.modules.length}`;
@@ -874,28 +956,136 @@ function startCurrentModule() {
   const subNoteEl = document.getElementById('subNote');
   if (subNoteEl) subNoteEl.style.display = 'none';
 
-  // Show/hide watch bar depending on whether module has a video
   const watchBarWrap = document.querySelector('.watch-bar-wrap');
   const watchNote    = document.getElementById('watchNote');
-  if (state.hasVideo) {
-    watchBarWrap.style.display = 'block';
-    if (watchNote) watchNote.style.display = 'block';
-    document.getElementById('watchPct').textContent = '0%';
-    document.getElementById('watchBar').style.width = '0%';
-    document.getElementById('watchBar').classList.remove('green');
-  } else {
-    watchBarWrap.style.display = 'none';
-    if (watchNote) watchNote.style.display = 'none';
-    state.watchPct = 100; // no video = watch requirement waived
-  }
+  watchBarWrap.style.display = 'block';
+  if (watchNote) watchNote.style.display = 'block';
+  document.getElementById('watchPct').textContent = '0%';
+  document.getElementById('watchBar').style.width = '0%';
+  document.getElementById('watchBar').classList.remove('green');
+
+  startGPS();
+  loadSubtitlesThenBuild(mod);
+  showScreen('screen-video');
+}
+
+function startContentModule(mod) {
+  state.gpsCoords = null;
+  clearInterval(state.countdownTimer);
+
+  const idx   = state.currentModIdx;
+  const total = state.modules.length;
+
+  document.getElementById('ct-title').textContent   = mod.title;
+  document.getElementById('ct-sub').textContent     = `Module ${idx + 1} of ${total}`;
+  document.getElementById('ct-progress').textContent = `${idx + 1} / ${total}`;
+
+  // Show translated content, fall back to original
+  const bodyEl = document.getElementById('ct-body');
+  const text   = mod.content_translated || mod.content_original || mod.title || '';
+  bodyEl.textContent = text;
+
+  // Reset confirm state
+  const confirmWrap = document.getElementById('ct-confirm-wrap');
+  const checkbox    = document.getElementById('ct-checkbox');
+  const contBtn     = document.getElementById('ct-continueBtn');
+  confirmWrap.style.display = 'none';
+  checkbox.checked  = false;
+  contBtn.disabled  = true;
 
   // GPS
-  startGPS();
+  startGPSContent();
 
-  // Fetch subtitles for learner's language, then build video
-  loadSubtitlesThenBuild(mod);
+  // Start countdown
+  let secs = CONTENT_CONFIRM_DELAY;
+  document.getElementById('ct-countdown-sec').textContent = secs;
+  document.getElementById('ct-countdown').textContent     = secs;
+  document.getElementById('ct-countdown-msg').innerHTML   =
+    `You may confirm in <strong id="ct-countdown-sec">${secs}</strong> seconds…`;
 
-  showScreen('screen-video');
+  state.countdownTimer = setInterval(() => {
+    secs--;
+    const secEl = document.getElementById('ct-countdown-sec');
+    const numEl = document.getElementById('ct-countdown');
+    if (secEl) secEl.textContent = secs;
+    if (numEl) numEl.textContent = secs;
+    if (secs <= 0) {
+      clearInterval(state.countdownTimer);
+      // Show checkbox
+      document.getElementById('ct-countdown-wrap').style.display = 'none';
+      confirmWrap.style.display = 'flex';
+    }
+  }, 1000);
+
+  showScreen('screen-content');
+}
+
+function startGPSContent() {
+  const el = document.getElementById('ct-gpsStatus');
+  el.className = 'gps-status gps-waiting';
+  el.textContent = '📍 Acquiring your location…';
+
+  if (!navigator.geolocation) {
+    el.className = 'gps-status gps-err';
+    el.textContent = '⚠ Location services not available';
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      state.gpsCoords = {
+        lat: pos.coords.latitude.toFixed(6),
+        lng: pos.coords.longitude.toFixed(6),
+        acc: Math.round(pos.coords.accuracy),
+      };
+      el.className = 'gps-status gps-ok';
+      el.textContent = `✓ Location confirmed (±${state.gpsCoords.acc}m)`;
+    },
+    err => {
+      el.className = 'gps-status gps-err';
+      el.textContent = '⚠ Location access denied — please enable location services';
+    },
+    { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+  );
+}
+
+function onConfirmCheck() {
+  const checked = document.getElementById('ct-checkbox').checked;
+  document.getElementById('ct-continueBtn').disabled = !checked;
+}
+
+async function completeContentModule() {
+  const mod = state.modules[state.currentModIdx];
+  const btn = document.getElementById('ct-continueBtn');
+  btn.classList.add('loading'); btn.disabled = true;
+
+  try {
+    await apiPost({
+      action:       'lms.complete.module',
+      learner_id:   state.learner.id,
+      course_id:    state.selectedCourse.id,
+      module_id:    mod.id,
+      watch_seconds: 0,
+      gps_lat:      state.gpsCoords?.lat || '',
+      gps_lng:      state.gpsCoords?.lng || '',
+      gps_accuracy: state.gpsCoords?.acc || '',
+    });
+
+    state.completedMods.add(mod.id);
+    clearInterval(state.countdownTimer);
+
+    if (state.currentModIdx < state.modules.length - 1) {
+      state.currentModIdx++;
+    }
+
+    buildOverview();
+    showScreen('screen-overview');
+    toast('✅ Module complete!', 'ok');
+
+  } catch(e) {
+    toast('Could not save: ' + e.message, 'err');
+    btn.classList.remove('loading'); btn.disabled = false;
+  }
 }
 
 async function loadSubtitlesThenBuild(mod) {
@@ -1285,6 +1475,8 @@ function resetAll() {
   state.gpsCoords      = null;
   state.watchPct       = 0;
   state.currentVTT      = null;
+  state.courseVideoUrl  = null;
+  clearInterval(state.countdownTimer);
   document.getElementById('w-course').value = '';
   document.getElementById('courseInfo').style.display = 'none';
   document.getElementById('startBtn').disabled = true;
