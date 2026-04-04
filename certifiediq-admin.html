@@ -586,7 +586,8 @@ async function apiGet(params) {
 async function apiPost(body) {
   const res = await fetch(API, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    redirect: 'follow',
+    headers: { 'Content-Type': 'text/plain' },
     body: JSON.stringify(body)
   });
   const d = await res.json();
