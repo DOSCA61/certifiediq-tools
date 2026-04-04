@@ -1509,7 +1509,50 @@ function resetAll() {
 // ═══════════════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════════════
-window.addEventListener('DOMContentLoaded', loadCourses);
+window.addEventListener('DOMContentLoaded', async () => {
+  await loadCourses();
+
+  // Read URL params — pre-fill email and course if provided via scheduled link
+  const params = new URLSearchParams(window.location.search);
+  const emailParam  = params.get('email');
+  const courseParam = params.get('course');
+
+  if (emailParam) {
+    document.getElementById('e-email').value = emailParam;
+    // Try to pre-fill name from learner record
+    try {
+      const learner = await apiGet({ action: 'lms.learners.byEmail', email: emailParam });
+      if (learner) {
+        document.getElementById('e-name').value     = learner.name     || '';
+        document.getElementById('e-employer').value = learner.employer || '';
+        const langSel = document.getElementById('e-lang');
+        if (learner.language) {
+          for (let i = 0; i < langSel.options.length; i++) {
+            if (langSel.options[i].text === learner.language) {
+              langSel.selectedIndex = i; break;
+            }
+          }
+        }
+      }
+    } catch(e) { /* learner not found yet — they'll fill in manually */ }
+  }
+
+  if (courseParam) {
+    const sel = document.getElementById('w-course');
+    for (let i = 0; i < sel.options.length; i++) {
+      if (sel.options[i].value === courseParam) {
+        sel.selectedIndex = i;
+        onCourseSelect();
+        break;
+      }
+    }
+  }
+
+  // If both params present, jump straight to enrolment screen
+  if (emailParam && courseParam && state.selectedCourse) {
+    showScreen('screen-enrol');
+  }
+});
 </script>
 </body>
 </html>

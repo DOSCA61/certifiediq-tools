@@ -209,6 +209,11 @@
   .pill-pass      { background: var(--green-glow);             color: var(--green);  border: 1px solid rgba(0,158,115,0.4); }
   .pill-fail      { background: var(--red-glow);               color: var(--red);    border: 1px solid rgba(213,94,0,0.3); }
   .pill-fsai      { background: rgba(124,58,237,0.10);         color: var(--purple); border: 1px solid rgba(124,58,237,0.3); }
+  .pill-pending   { background: rgba(0,114,178,0.10);          color: var(--accent); border: 1px solid rgba(0,114,178,0.3); }
+  .pill-overdue   { background: var(--red-glow);               color: var(--red);    border: 1px solid rgba(213,94,0,0.3); }
+  .pill-induction { background: rgba(124,58,237,0.10);         color: var(--purple); border: 1px solid rgba(124,58,237,0.3); }
+  .pill-refresher { background: rgba(230,159,0,0.10);          color: #92400e;       border: 1px solid rgba(230,159,0,0.4); }
+  .pill-assigned  { background: rgba(0,114,178,0.10);          color: var(--accent); border: 1px solid rgba(0,114,178,0.3); }
 
   /* ── EMPTY STATE ── */
   .empty {
@@ -270,6 +275,7 @@
     <button class="nav-tab" onclick="switchPane('learners', this)">👥 Learners</button>
     <button class="nav-tab" onclick="switchPane('enrolments', this)">📋 Enrolments</button>
     <button class="nav-tab" onclick="switchPane('compliance', this)">🏛 Compliance</button>
+    <button class="nav-tab" onclick="switchPane('schedule', this)">📅 Schedule</button>
   </div>
 
   <!-- ═══════════════════════════════════════════════
@@ -489,6 +495,67 @@
     </div>
   </div>
 
+  <!-- ═══════════════════════════════════════════════
+       SCHEDULE PANE
+  ═══════════════════════════════════════════════ -->
+  <div id="pane-schedule" class="pane">
+
+    <!-- Assign Course -->
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-title"><div class="dot" style="background:var(--accent)"></div>Assign Course to Learner</div>
+      <div class="form-grid" style="margin-bottom:12px">
+        <div class="field">
+          <div class="field-label">Learner</div>
+          <select id="sch-learner"><option value="">— select learner —</option></select>
+        </div>
+        <div class="field">
+          <div class="field-label">Course</div>
+          <select id="sch-course"><option value="">— select course —</option></select>
+        </div>
+        <div class="field">
+          <div class="field-label">Due Date</div>
+          <input type="date" id="sch-due">
+        </div>
+        <div class="field">
+          <div class="field-label">Send Email Now</div>
+          <select id="sch-email">
+            <option value="true">Yes — send assignment email</option>
+            <option value="false">No — schedule only</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn btn-primary" id="assignBtn" onclick="assignCourse()">
+        <span class="spinner-inline"></span>📅 Assign Course
+      </button>
+    </div>
+
+    <!-- Induction Courses -->
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-title"><div class="dot" style="background:var(--purple)"></div>Induction Courses</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">
+        Induction courses are automatically assigned to new learners overnight.
+      </div>
+      <div id="inductionList"><div class="empty">Loading…</div></div>
+    </div>
+
+    <!-- Schedule Overview -->
+    <div class="refresh-row">
+      <div class="section-label" style="margin:0;flex:1">Schedule Overview</div>
+      <button class="btn btn-ghost btn-sm" onclick="loadSchedule()">↺ Refresh</button>
+      <button class="btn btn-ghost btn-sm" onclick="runNightly()" style="border-color:var(--yellow);color:#92400e">⚡ Run Nightly Now</button>
+    </div>
+    <div class="tbl-wrap" id="scheduleTable"><div class="empty">Loading…</div></div>
+
+    <!-- Email Log -->
+    <br>
+    <div class="refresh-row">
+      <div class="section-label" style="margin:0;flex:1">Email Log</div>
+      <button class="btn btn-ghost btn-sm" onclick="loadEmailLog()">↺ Refresh</button>
+    </div>
+    <div class="tbl-wrap" id="emailLogTable"><div class="empty">Loading…</div></div>
+
+  </div>
+
 </div><!-- /shell -->
 
 <div id="toast"></div>
@@ -551,6 +618,7 @@ function switchPane(name, btn) {
   if (name === 'learners')   loadLearners();
   if (name === 'enrolments') loadEnrolments();
   if (name === 'compliance') populateComplianceCourses();
+  if (name === 'schedule')   { loadSchedule(); loadEmailLog(); loadInductionList(); populateScheduleDropdowns(); }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -856,6 +924,128 @@ async function refreshAll() {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// SCHEDULE
+// ═══════════════════════════════════════════════════════════════
+async function loadSchedule() {
+  const el = document.getElementById('scheduleTable');
+  el.innerHTML = '<div class="empty">Loading…</div>';
+  try {
+    const rows = await apiGet({ action: 'lms.schedule.dashboard' });
+    if (!rows.length) { el.innerHTML = '<div class="empty">No scheduled courses yet.</div>'; return; }
+    el.innerHTML = `<table>
+      <thead><tr>
+        <th>Learner</th><th>Course</th><th>Type</th><th>Due Date</th><th>Status</th><th>Email Sent</th>
+      </tr></thead>
+      <tbody>${rows.map(r => {
+        const pillClass = r.status === 'completed' ? 'pill-completed'
+                        : r.status === 'overdue'   ? 'pill-overdue'
+                        : r.status === 'pending'   ? 'pill-pending' : 'pill-enrolled';
+        const typePill  = r.type === 'induction' ? 'pill-induction'
+                        : r.type === 'refresher'  ? 'pill-refresher' : 'pill-assigned';
+        return `<tr>
+          <td style="font-weight:500">${r.learner_name}</td>
+          <td>${r.course_title}</td>
+          <td><span class="pill ${typePill}">${r.type}</span></td>
+          <td class="td-mono" style="font-size:11px">${r.due_date || '—'}</td>
+          <td><span class="pill ${pillClass}">${r.status}</span></td>
+          <td class="td-mono" style="font-size:10px;color:var(--text-muted)">${r.sent_at ? fmtDate(r.sent_at) : '—'}</td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table>`;
+  } catch(e) {
+    el.innerHTML = `<div class="empty">Error: ${e.message}</div>`;
+  }
+}
+
+async function loadEmailLog() {
+  const el = document.getElementById('emailLogTable');
+  el.innerHTML = '<div class="empty">Loading…</div>';
+  try {
+    const rows = await apiGet({ action: 'lms.emaillog.recent' });
+    if (!rows.length) { el.innerHTML = '<div class="empty">No emails sent yet.</div>'; return; }
+    el.innerHTML = `<table>
+      <thead><tr><th>Sent</th><th>To</th><th>Type</th><th>Subject</th><th>Status</th></tr></thead>
+      <tbody>${rows.map(r => `<tr>
+        <td class="td-mono" style="font-size:10px">${fmtDate(r.sent_at)}</td>
+        <td class="td-mono" style="font-size:11px">${r.email || '—'}</td>
+        <td><span class="pill pill-assigned">${r.type || '—'}</span></td>
+        <td style="font-size:12px;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.subject || '—'}</td>
+        <td><span class="pill ${r.status === 'sent' ? 'pill-completed' : 'pill-overdue'}">${r.status}</span></td>
+      </tr>`).join('')}</tbody>
+    </table>`;
+  } catch(e) {
+    el.innerHTML = `<div class="empty">Error: ${e.message}</div>`;
+  }
+}
+
+async function loadInductionList() {
+  const el = document.getElementById('inductionList');
+  if (!_courses.length) _courses = await apiGet({ action: 'lms.courses.all' }).catch(() => []);
+  const induction = _courses.filter(c => String(c.is_induction) === 'TRUE');
+  if (!induction.length) {
+    el.innerHTML = `<div style="font-size:12px;color:var(--text-muted)">
+      No induction courses set. Mark a course as induction by setting <code>is_induction = TRUE</code> in the Courses sheet tab.
+    </div>`;
+    return;
+  }
+  el.innerHTML = induction.map(c => `
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+      <span class="pill pill-induction">INDUCTION</span>
+      <span style="font-weight:500;font-size:13px">${c.title}</span>
+      <span class="td-mono" style="font-size:10px;color:var(--text-muted)">${c.regulatory_body || ''}</span>
+    </div>`).join('');
+}
+
+function populateScheduleDropdowns() {
+  const sl = document.getElementById('sch-learner');
+  const sc = document.getElementById('sch-course');
+  if (!sl || !sc) return;
+  sl.innerHTML = '<option value="">— select learner —</option>' +
+    _learners.map(l => `<option value="${l.id}">${l.name} (${l.email || l.employer || ''})</option>`).join('');
+  sc.innerHTML = '<option value="">— select course —</option>' +
+    _courses.map(c => `<option value="${c.id}">${c.title}</option>`).join('');
+  // Default due date to 7 days from now
+  const d = new Date(); d.setDate(d.getDate() + 7);
+  document.getElementById('sch-due').value = d.toISOString().slice(0,10);
+}
+
+async function assignCourse() {
+  const learner_id = document.getElementById('sch-learner').value;
+  const course_id  = document.getElementById('sch-course').value;
+  const due_date   = document.getElementById('sch-due').value;
+  const send_email = document.getElementById('sch-email').value === 'true';
+  if (!learner_id || !course_id) { toast('Select both a learner and a course', 'err'); return; }
+  const btn = document.getElementById('assignBtn');
+  btn.classList.add('loading'); btn.disabled = true;
+  try {
+    const result = await apiPost({ action: 'lms.schedule.assign', learner_id, course_id, due_date, send_email });
+    if (result.already_scheduled) {
+      toast('ℹ Already scheduled for this learner');
+    } else {
+      toast(`✅ Course assigned${send_email ? ' — email sent' : ''}`);
+    }
+    loadSchedule();
+    loadDashboard();
+  } catch(e) {
+    toast('Failed: ' + e.message, 'err');
+  } finally {
+    btn.classList.remove('loading'); btn.disabled = false;
+  }
+}
+
+async function runNightly() {
+  toast('⚡ Running nightly scheduler…', 'ok');
+  try {
+    const result = await apiPost({ action: 'lms.schedule.runNightly' });
+    toast(`✅ Nightly run complete — ${result.processed} action${result.processed !== 1 ? 's' : ''}`, 'ok');
+    loadSchedule();
+    loadEmailLog();
+  } catch(e) {
+    toast('Nightly run failed: ' + e.message, 'err');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', async () => {
@@ -867,6 +1057,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     populateEnrolCourses();
     populateEnrolLearners();
     populateComplianceCourses();
+    populateScheduleDropdowns();
   } catch(e) { /* silent */ }
 });
 </script>
