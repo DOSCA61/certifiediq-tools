@@ -1539,12 +1539,27 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   if (courseParam) {
     const sel = document.getElementById('w-course');
+
+    // If arriving via scheduled link — filter dropdown to assigned course(s) only
+    // First check if the course exists in the loaded list
+    let found = false;
     for (let i = 0; i < sel.options.length; i++) {
       if (sel.options[i].value === courseParam) {
-        sel.selectedIndex = i;
+        // Rebuild dropdown with only this course
+        const courseLabel = sel.options[i].text;
+        sel.innerHTML = `<option value="${courseParam}">${courseLabel}</option>`;
+        sel.selectedIndex = 0;
+        sel.disabled = true; // lock it — learner can't change course
         onCourseSelect();
+        found = true;
         break;
       }
+    }
+
+    // If course not found in list (inactive etc.) — show message
+    if (!found) {
+      sel.innerHTML = `<option value="">Course not found or no longer available</option>`;
+      sel.disabled = true;
     }
   }
 
