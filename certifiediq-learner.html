@@ -1563,9 +1563,16 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // If both params present, jump straight to enrolment screen
-  if (emailParam && courseParam && state.selectedCourse) {
+  // If course param present — skip welcome screen entirely
+  if (courseParam && state.selectedCourse) {
     showScreen('screen-enrol');
+  } else if (courseParam && !state.selectedCourse) {
+    // Course param given but not found in catalogue — show welcome with message
+    const infoEl = document.getElementById('courseInfo');
+    if (infoEl) {
+      infoEl.style.display = 'block';
+      infoEl.innerHTML = '<strong>⚠ Course not available.</strong> Please contact your training administrator.';
+    }
   }
 });
 </script>
